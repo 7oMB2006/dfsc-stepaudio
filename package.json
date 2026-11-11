@@ -14,7 +14,8 @@
     "pretest": "npm run build",
     "smoke": "node scripts/smoke.mjs",
     "configure": "node scripts/configure.mjs",
-    "make-icon": "node scripts/make-icon.mjs"
+    "make-icon": "node scripts/make-icon.mjs",
+    "docs:voices": "node scripts/build-voices-doc.mjs"
   },
   "engines": {
     "node": ">=20"

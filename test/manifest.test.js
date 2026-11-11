@@ -108,6 +108,35 @@ test('dfsc.plugin.json requirements 契约（宿主 schema：作者声明的准�
   assert.ok(requirements.external.some((item) => /Node\.js/.test(item.name)), '声明 Node.js 运行环境');
 });
 
+test('dfsc.plugin.json desktop 工作区契约', async () => {
+  const declaration = JSON.parse(await fs.readFile(path.join(PLUGIN_ROOT, 'dfsc.plugin.json'), 'utf8'));
+  const desktop = declaration.desktop;
+  assert.ok(desktop, '声明 desktop 工作区');
+  assert.ok(typeof desktop.title === 'string' && desktop.title !== '' && desktop.title.length <= 160, 'title 非空且 ≤160');
+  assert.ok(['main-view', 'side-panel', 'window'].includes(desktop.surface), 'surface 合法');
+  assert.ok(['plug', 'bot', 'book', 'wrench', 'sparkles'].includes(desktop.symbol), 'symbol 合法');
+  assert.ok(Array.isArray(desktop.pages) && desktop.pages.length >= 1 && desktop.pages.length <= 8, '页面 1–8 个');
+
+  const ids = desktop.pages.map((page) => page.id);
+  assert.equal(new Set(ids).size, ids.length, '页面 ID 不重复');
+  for (const page of desktop.pages) {
+    assert.match(page.id, /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/, `页面 ID 格式：${page.id}`);
+    assert.ok(typeof page.title === 'string' && page.title !== '' && page.title.length <= 160, '页面 title 非空且 ≤160');
+    assert.match(page.document, /\.md$/i, '页面文档为 Markdown');
+    const filePath = path.join(PLUGIN_ROOT, page.document);
+    assert.ok(await fileExists(filePath), `页面文档存在：${page.document}`);
+    assert.ok((await fs.stat(filePath)).size <= 256 * 1024, `页面文档不超过 256 KiB：${page.document}`);
+  }
+  assert.ok(ids.includes(desktop.defaultPage), 'defaultPage 对应已声明页面');
+
+  if (declaration.documentation?.changelog !== undefined) {
+    assert.ok(
+      await fileExists(path.join(PLUGIN_ROOT, declaration.documentation.changelog)),
+      `changelog 文件存在：${declaration.documentation.changelog}`,
+    );
+  }
+});
+
 test('provider.example 是占位模板且不含真实凭据', async () => {
   const example = await fs.readFile(path.join(PLUGIN_ROOT, 'provider.example'), 'utf8');
   assert.ok(example.includes('REPLACE_WITH_YOUR_KEY'), 'Key 为占位符');
