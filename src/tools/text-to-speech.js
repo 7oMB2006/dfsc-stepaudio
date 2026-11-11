@@ -19,17 +19,17 @@ export const definition = {
     type: 'object',
     properties: {
       text: { type: 'string', description: '要合成的文本，最大 1000 字符。括号 () 内内容作为指令处理、不发音。' },
-      voice: { type: 'string', description: '音色 ID，官方音色或已复刻音色（可用 list_voices 查询）。' },
-      model: { type: 'string', description: '模型，如 stepaudio-2.5-tts / stepaudio-3-tts / step-tts-2 / step-tts-mini。' },
-      instruction: { type: 'string', description: '全局自然语言指导（情绪基调、人设），stepaudio-2.5-tts 上限 200 字符。' },
-      response_format: { type: 'string', enum: RESPONSE_FORMATS, description: '音频格式，默认 mp3。' },
+      voice: { type: 'string', description: '音色 ID（官方或已复刻，可用 list_voices 查询）。缺省时使用配置中的默认音色。' },
+      model: { type: 'string', description: '模型，如 stepaudio-2.5-tts / stepaudio-3-tts / step-tts-2 / step-tts-mini；缺省用配置值。' },
+      instruction: { type: 'string', description: '全局自然语言指导（情绪基调、人设），stepaudio-2.5-tts 上限 200 字符；缺省用配置值。' },
+      response_format: { type: 'string', enum: RESPONSE_FORMATS, description: '音频格式，缺省用配置值（默认 mp3）。' },
       speed: { type: 'number', description: '语速 0.5~2，默认 1.0。' },
       volume: { type: 'number', description: '音量 0.1~2.0，默认 1.0。' },
       sample_rate: { type: 'integer', enum: SAMPLE_RATES, description: '采样率，默认 24000。' },
       output_path: { type: 'string', description: '输出文件路径（绝对或相对）；缺省写入插件 output 目录。' },
       return_url: { type: 'boolean', description: 'true 时不落盘，返回上游文件 URL（12 小时有效）与字幕（如有）。' },
     },
-    required: ['text', 'voice'],
+    required: ['text'],
   },
 };
 
@@ -40,12 +40,15 @@ export async function handler(args, ctx) {
   if (text.length > 1000) {
     throw new McpToolError(`text 超长：${text.length} 字符，上限 1000`, { code: 'INVALID_ARGS' });
   }
-  const voice = String(args.voice ?? '').trim();
-  if (voice === '') throw new McpToolError('voice 不能为空', { code: 'INVALID_ARGS' });
+  // 默认值来自配置（插件中心设置 / env / CLI 私密配置），按次传参优先
+  const voice = (String(args.voice ?? '').trim() || config.voice || '').trim();
+  if (voice === '') {
+    throw new McpToolError('voice 不能为空：请按次指定，或在配置中设置默认音色', { code: 'INVALID_ARGS' });
+  }
 
   const model = args.model ?? config.model;
-  const instruction = args.instruction;
-  if (instruction !== undefined) {
+  const instruction = args.instruction ?? config.instruction;
+  if (instruction !== undefined && instruction !== '') {
     const limit = INSTRUCTION_LIMITS[model];
     if (limit !== undefined && instruction.length > limit) {
       throw new McpToolError(`instruction 超长：${instruction.length} 字符，模型 ${model} 上限 ${limit}`, {
@@ -54,7 +57,7 @@ export async function handler(args, ctx) {
     }
   }
 
-  const responseFormat = args.response_format ?? 'mp3';
+  const responseFormat = (args.response_format ?? config.responseFormat ?? 'mp3').toLowerCase();
   const returnUrl = args.return_url === true;
 
   const params = cleanParams({

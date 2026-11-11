@@ -1061,10 +1061,10 @@ var require_util = __commonJS({
     var codegen_1 = require_codegen();
     var code_1 = require_code();
     function toHash(arr) {
-      const hash = {};
+      const hash2 = {};
       for (const item of arr)
-        hash[item] = true;
-      return hash;
+        hash2[item] = true;
+      return hash2;
     }
     exports.toHash = toHash;
     function alwaysValidSchema(it, schema) {
@@ -2984,7 +2984,7 @@ var require_compile = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve.call(this, root, ref);
+      let _sch = resolve2.call(this, root, ref);
       if (_sch === void 0) {
         const schema = (_a3 = root.localRefs) === null || _a3 === void 0 ? void 0 : _a3[ref];
         const { schemaId } = this.opts;
@@ -3011,7 +3011,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve(root, ref) {
+    function resolve2(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -3875,7 +3875,7 @@ var require_fast_uri = __commonJS({
       }
       return uri;
     }
-    function resolve(baseURI, relativeURI, options) {
+    function resolve2(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
       const {
         parsed: baseParsed,
@@ -4266,7 +4266,7 @@ var require_fast_uri = __commonJS({
     var fastUri = {
       SCHEMES,
       normalize,
-      resolve,
+      resolve: resolve2,
       resolveComponent,
       equal,
       serialize,
@@ -10606,7 +10606,7 @@ var recursive = /* @__PURE__ */ new WeakMap();
 var NONE = 0;
 var ASSUMED = 1;
 var PROVEN = 2;
-function isRecursive(inst, stack, resolve) {
+function isRecursive(inst, stack, resolve2) {
   const cached2 = recursive.get(inst);
   if (cached2 !== void 0)
     return cached2 ? PROVEN : NONE;
@@ -10616,7 +10616,7 @@ function isRecursive(inst, stack, resolve) {
   let result = NONE;
   const check = (child) => {
     if (result !== PROVEN && child?._zod) {
-      const answer = isRecursive(child, stack, resolve);
+      const answer = isRecursive(child, stack, resolve2);
       if (answer > result)
         result = answer;
     }
@@ -10627,7 +10627,7 @@ function isRecursive(inst, stack, resolve) {
       const desc = Object.getOwnPropertyDescriptor(sh, key);
       if (spread && !desc.enumerable)
         continue;
-      const child = desc.get ? ASSUMED : desc.value?._zod ? isRecursive(desc.value, stack, resolve) : NONE;
+      const child = desc.get ? ASSUMED : desc.value?._zod ? isRecursive(desc.value, stack, resolve2) : NONE;
       if (child > answer)
         answer = child;
     }
@@ -10691,7 +10691,7 @@ function isRecursive(inst, stack, resolve) {
       break;
     // `$ZodLazy` caches its inner on the def, so a resolved edge is followed exactly
     case "lazy": {
-      const inner = def._cachedInner ?? (resolve ? inst._zod.innerType : void 0);
+      const inner = def._cachedInner ?? (resolve2 ? inst._zod.innerType : void 0);
       merge2(inner ? isRecursive(inner, stack, false) : ASSUMED);
       break;
     }
@@ -15790,7 +15790,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve) => setTimeout(resolve, pollInterval));
+        await new Promise((resolve2) => setTimeout(resolve2, pollInterval));
         options?.signal?.throwIfAborted();
       }
     } catch (error2) {
@@ -15807,7 +15807,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options ?? {};
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve2, reject) => {
       const earlyReject = (error2) => {
         reject(error2);
       };
@@ -15885,7 +15885,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve(parseResult.data);
+            resolve2(parseResult.data);
           }
         } catch (error2) {
           reject(error2);
@@ -16147,12 +16147,12 @@ var Protocol = class {
       }
     } catch {
     }
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve2, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve, interval);
+      const timeoutId = setTimeout(resolve2, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -17028,12 +17028,12 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message) {
-    return new Promise((resolve) => {
+    return new Promise((resolve2) => {
       const json = serializeMessage(message);
       if (this._stdout.write(json)) {
-        resolve();
+        resolve2();
       } else {
-        this._stdout.once("drain", resolve);
+        this._stdout.once("drain", resolve2);
       }
     });
   }
@@ -17041,8 +17041,10 @@ var StdioServerTransport = class {
 
 // src/config.js
 import path from "node:path";
+import os from "node:os";
+import { statSync } from "node:fs";
 import { promises as fs } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath as fileURLToPath2, pathToFileURL } from "node:url";
 
 // src/lib/errors.js
 var McpToolError = class extends Error {
@@ -17090,9 +17092,104 @@ function parseEnvFile(text) {
   return result;
 }
 
+// src/lib/dfsc-config.mjs
+import { createHash } from "node:crypto";
+import { lstat, open as open2, readdir, realpath } from "node:fs/promises";
+import { basename, dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+var fail = () => {
+  throw new Error("Plugin configuration unavailable or changed; save and restart the service.");
+};
+var hash = (value) => createHash("sha256").update(value).digest("hex");
+async function read(root, path6, limit = 256 * 1024) {
+  if (!path6 || /[:\\\0]/u.test(path6) || path6.split("/").some((part) => !part || part === ".." || part === ".")) fail();
+  let target = resolve(root);
+  const canonicalRoot = await realpath(target);
+  if (canonicalRoot !== target || (await lstat(target)).isSymbolicLink()) fail();
+  for (const part of path6.split("/")) {
+    target = join(target, part);
+    if ((await lstat(target)).isSymbolicLink()) fail();
+  }
+  const before = await lstat(target);
+  const canonicalTarget = await realpath(target);
+  if (canonicalTarget !== target || !before.isFile() || before.size > limit) fail();
+  const handle = await open2(target, "r");
+  try {
+    const stat2 = await handle.stat();
+    if (before.ino !== stat2.ino || before.dev !== stat2.dev) fail();
+    const bytes = Buffer.alloc(before.size + 1);
+    const { bytesRead } = await handle.read(bytes, 0, bytes.length, 0);
+    const after = await lstat(target), held = await handle.stat();
+    if (bytesRead !== before.size || before.ino !== after.ino || before.dev !== after.dev || before.mtimeMs !== after.mtimeMs || before.size !== held.size || before.mtimeMs !== held.mtimeMs || await realpath(target) !== canonicalTarget || await realpath(root) !== canonicalRoot) fail();
+    let cursor = resolve(root);
+    if ((await lstat(cursor)).isSymbolicLink()) fail();
+    for (const part of path6.split("/")) {
+      cursor = join(cursor, part);
+      if ((await lstat(cursor)).isSymbolicLink()) fail();
+    }
+    return bytes.subarray(0, bytesRead);
+  } finally {
+    await handle.close();
+  }
+}
+async function fingerprint(root) {
+  const digest = createHash("sha256");
+  let count = 0, size = 0;
+  async function visit(path6 = "") {
+    if ((await lstat(path6 ? join(root, path6) : root)).isSymbolicLink()) fail();
+    for (const item of (await readdir(join(root, path6), { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name))) {
+      if (++count > 1e4 || item.isSymbolicLink()) fail();
+      const child = path6 ? `${path6}/${item.name}` : item.name;
+      if (item.isDirectory()) await visit(child);
+      else {
+        const bytes = await read(root, child, 128 * 1024 * 1024);
+        size += bytes.length;
+        if (size > 128 * 1024 * 1024) fail();
+        digest.update(JSON.stringify([child, bytes.length])).update(bytes);
+      }
+    }
+  }
+  await visit();
+  return digest.digest("hex");
+}
+var ConfigurationReader = class {
+  constructor(packageUrl) {
+    this.directory = resolve(fileURLToPath(packageUrl));
+    if (basename(dirname(this.directory)) !== "plugins") fail();
+    this.root = dirname(dirname(this.directory));
+    this.folder = basename(this.directory);
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,79}$/u.test(this.folder)) fail();
+  }
+  async current() {
+    try {
+      const bindingPath = `desktop-plugins/bindings/${this.folder}.json`;
+      const bindingBytes = await read(this.root, bindingPath);
+      const binding = JSON.parse(bindingBytes.toString("utf8"));
+      if (binding.version !== 1 || binding.revoked || !/^[a-f0-9-]{36}$/u.test(binding.instance) || !/^[a-f0-9]{64}$/u.test(binding.revision)) fail();
+      const receipts = JSON.parse((await read(this.root, "desktop-plugins/installations.json", 1024 * 1024)).toString("utf8"));
+      const matches = (item) => item.instance === binding.instance && item.folder === this.folder && item.id === binding.id && item.state === "installed" && item.fingerprint === binding.fingerprint;
+      if (receipts.version !== 1 || receipts.installations.filter(matches).length !== 1) fail();
+      const configPath = `desktop-plugins/settings/${binding.instance}/${binding.revision}.json`;
+      const configBytes = await read(this.root, configPath);
+      const config2 = JSON.parse(configBytes.toString("utf8"));
+      const manifest = JSON.parse((await read(this.directory, "step.plugin.json", 512 * 1024)).toString("utf8"));
+      if (manifest.id !== binding.id || config2.version !== 1 || config2.instance !== binding.instance || config2.id !== binding.id || config2.revision !== binding.revision || config2.schemaHash !== binding.schemaHash || hash(JSON.stringify(config2)) !== binding.contentHash || hash(await read(this.directory, "dfsc.settings.json", 65536)) !== binding.schemaHash || await fingerprint(this.directory) !== binding.fingerprint) fail();
+      const rechecked = JSON.parse((await read(this.root, "desktop-plugins/installations.json", 1024 * 1024)).toString("utf8"));
+      if (rechecked.version !== 1 || rechecked.installations.filter(matches).length !== 1 || !(await read(this.root, bindingPath)).equals(bindingBytes) || !(await read(this.root, configPath)).equals(configBytes)) fail();
+      const stamp = hash(JSON.stringify(binding));
+      if (this.stamp && this.stamp !== stamp) fail();
+      this.stamp = stamp;
+      return { values: config2.values, secrets: config2.secrets, revision: config2.revision };
+    } catch {
+      fail();
+    }
+  }
+};
+
 // src/config.js
 var MODES = ["stepplan", "openapi"];
-var PLACEHOLDER_KEY = "stepaudio-managed-provider-context";
+var RESPONSE_FORMATS = ["mp3", "wav", "flac", "opus", "pcm"];
+var PLACEHOLDER_KEYS = ["DFSC_INDEPENDENT_PLUGIN", "stepaudio-managed-provider-context"];
 var DEFAULT_BASE_URLS = {
   // 沿用 Step Plan 登录态额度
   stepplan: "https://api.stepfun.com/step_plan/v1",
@@ -17100,9 +17197,12 @@ var DEFAULT_BASE_URLS = {
   openapi: "https://api.stepfun.com/v1"
 };
 var API_KEY_ENV_CANDIDATES = ["STEP_API_KEY", "STEPFUN_API_KEY", "DFSC_STEP_PLAN_API_KEY"];
-var PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+var PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath2(import.meta.url)), "..");
 var MAX_CONFIG_BYTES = 64 * 1024;
 var MAX_ENV_FILE_BYTES = 128 * 1024;
+function packageUrlFor(pluginRoot) {
+  return new URL("./", pathToFileURL(path.join(path.resolve(pluginRoot), "package.json")));
+}
 function firstNonEmpty(source, names) {
   for (const name of names) {
     const value = source?.[name];
@@ -17117,25 +17217,6 @@ function normalizeMode(raw) {
   }
   return mode;
 }
-function buildConfig(settings) {
-  const mode = normalizeMode(settings.STEPAUDIO_MODE);
-  const baseUrl = (settings.STEPAUDIO_BASE_URL?.trim() || DEFAULT_BASE_URLS[mode]).replace(/\/+$/, "");
-  if (!/^https?:\/\//.test(baseUrl)) {
-    throw new McpToolError(`base URL \u4E0D\u5408\u6CD5\uFF08\u9700\u4EE5 http(s):// \u5F00\u5934\uFF09\uFF1A${baseUrl}`, { code: "CONFIG_ERROR" });
-  }
-  const apiKey = settings.apiKey.trim();
-  if (apiKey === "") {
-    throw new McpToolError("API Key \u4E0D\u80FD\u4E3A\u7A7A", { code: "CONFIG_ERROR" });
-  }
-  return {
-    mode,
-    baseUrl,
-    apiKey,
-    model: settings.STEPAUDIO_MODEL?.trim() || "stepaudio-2.5-tts",
-    outputDir: path.resolve(settings.STEPAUDIO_OUTPUT_DIR?.trim() || path.join(PLUGIN_ROOT, "output")),
-    pluginRoot: PLUGIN_ROOT
-  };
-}
 function isInside(root, target) {
   const relative = path.relative(path.resolve(root), path.resolve(target));
   return relative === "" || !relative.startsWith("..") && !path.isAbsolute(relative);
@@ -17143,6 +17224,105 @@ function isInside(root, target) {
 function installedProfileDir(pluginRoot = PLUGIN_ROOT) {
   const parent = path.dirname(path.resolve(pluginRoot));
   return path.basename(parent) === "plugins" ? path.dirname(parent) : null;
+}
+function isManagedInstall(pluginRoot = PLUGIN_ROOT) {
+  const root = installedProfileDir(pluginRoot);
+  if (!root) return false;
+  try {
+    statSync(path.join(root, "desktop-plugins"));
+    return true;
+  } catch {
+    return false;
+  }
+}
+function resolveOutputDir(outputDir, managed) {
+  if (typeof outputDir === "string" && outputDir.trim() !== "") {
+    const resolved = path.resolve(outputDir.trim());
+    if (managed && isInside(PLUGIN_ROOT, resolved)) {
+      throw new McpToolError(
+        `\u8F93\u51FA\u76EE\u5F55\u4E0D\u80FD\u4F4D\u4E8E\u63D2\u4EF6\u5305\u5185\uFF08\u4F1A\u7834\u574F\u5B89\u88C5\u5B8C\u6574\u6027\u6821\u9A8C\uFF09\uFF1A${resolved}`,
+        { code: "CONFIG_ERROR" }
+      );
+    }
+    return resolved;
+  }
+  return managed ? path.join(os.tmpdir(), "dfsc-stepaudio-output") : path.join(PLUGIN_ROOT, "output");
+}
+function buildConfig(fields) {
+  const pick2 = (value) => typeof value === "string" && value.trim() !== "" ? value.trim() : void 0;
+  const mode = normalizeMode(pick2(fields.mode));
+  const baseUrl = (pick2(fields.baseUrl) || DEFAULT_BASE_URLS[mode]).replace(/\/+$/, "");
+  if (!/^https?:\/\//.test(baseUrl)) {
+    throw new McpToolError(`base URL \u4E0D\u5408\u6CD5\uFF08\u9700\u4EE5 http(s):// \u5F00\u5934\uFF09\uFF1A${baseUrl}`, { code: "CONFIG_ERROR" });
+  }
+  const apiKey = (fields.apiKey ?? "").trim();
+  if (apiKey === "") {
+    throw new McpToolError("API Key \u4E0D\u80FD\u4E3A\u7A7A", { code: "CONFIG_ERROR" });
+  }
+  const model = pick2(fields.model) || "stepaudio-2.5-tts";
+  const responseFormat = (pick2(fields.responseFormat) || "mp3").toLowerCase();
+  if (!RESPONSE_FORMATS.includes(responseFormat)) {
+    throw new McpToolError(
+      `\u8F93\u51FA\u683C\u5F0F\u4E0D\u5408\u6CD5\uFF1A${fields.responseFormat}\uFF0C\u53EF\u9009\u503C\uFF1A${RESPONSE_FORMATS.join(" / ")}`,
+      { code: "CONFIG_ERROR" }
+    );
+  }
+  return {
+    mode,
+    baseUrl,
+    apiKey,
+    model,
+    responseFormat,
+    outputDir: resolveOutputDir(pick2(fields.outputDir), fields.managed === true),
+    voice: pick2(fields.voice) || "",
+    instruction: pick2(fields.instruction) || "",
+    managed: fields.managed === true,
+    revision: fields.revision ?? null,
+    pluginRoot: PLUGIN_ROOT
+  };
+}
+function managedFailure() {
+  return new McpToolError(
+    "\u5BBF\u4E3B\u914D\u7F6E\u4E0D\u53EF\u7528\u6216\u5DF2\u53D8\u66F4\u3002\u8BF7\u5728 DFSC \u63D2\u4EF6\u4E2D\u5FC3\u91CD\u65B0\u4FDD\u5B58\u672C\u63D2\u4EF6\u914D\u7F6E\uFF0C\u7136\u540E\u91CD\u542F\u670D\u52A1\uFF1B\u6258\u7BA1\u5B89\u88C5\u4E0B\u4E0D\u4F7F\u7528\u73AF\u5883\u53D8\u91CF\u6216\u5916\u90E8\u914D\u7F6E\u6587\u4EF6\u3002",
+    { code: "CONFIG_ERROR" }
+  );
+}
+async function loadManagedConfig(pluginRoot) {
+  let reader;
+  try {
+    reader = new ConfigurationReader(packageUrlFor(pluginRoot));
+  } catch {
+    throw managedFailure();
+  }
+  let snapshot;
+  try {
+    snapshot = await reader.current();
+  } catch {
+    throw managedFailure();
+  }
+  const values = snapshot.values ?? {};
+  const secrets = snapshot.secrets ?? {};
+  const apiKey = typeof secrets.api_key === "string" ? secrets.api_key.trim() : "";
+  if (apiKey === "") {
+    throw new McpToolError(
+      "\u5BBF\u4E3B\u914D\u7F6E\u4E2D\u7F3A\u5C11 API Key\uFF1A\u8BF7\u5728 DFSC \u63D2\u4EF6\u4E2D\u5FC3\u6253\u5F00\u672C\u63D2\u4EF6\u914D\u7F6E\u9875\u586B\u5199\u540E\u4FDD\u5B58\uFF0C\u5E76\u91CD\u542F\u670D\u52A1\u3002",
+      { code: "CONFIG_ERROR" }
+    );
+  }
+  const config2 = buildConfig({
+    mode: values.mode,
+    baseUrl: values.base_url,
+    model: values.model,
+    apiKey,
+    outputDir: values.output_dir,
+    voice: values.voice,
+    instruction: values.instruction,
+    responseFormat: values.response_format,
+    managed: true,
+    revision: snapshot.revision
+  });
+  config2.reader = reader;
+  return config2;
 }
 function privateConfigCandidates(env = process.env, pluginRoot = PLUGIN_ROOT) {
   const candidates = [];
@@ -17167,17 +17347,29 @@ async function readBoundedText(filePath, limit, label) {
 }
 function missingConfigError(placeholderSeen, candidates) {
   const expected = candidates[0] ?? "<profile>/stepaudio/config.json";
-  const reason = placeholderSeen ? "\u68C0\u6D4B\u5230\u8DDF\u968F DFSC \u5360\u4F4D\u7B26\uFF0C\u4F46\u672A\u627E\u5230\u53EF\u7528\u7684\u79C1\u5BC6\u914D\u7F6E\u3002" : "\u672A\u627E\u5230 API Key \u6216\u79C1\u5BC6\u914D\u7F6E\u3002";
+  const reason = placeholderSeen ? "\u68C0\u6D4B\u5230\u5360\u4F4D\u7B26\uFF08\u672A\u914D\u7F6E\u72EC\u7ACB Key\uFF09\uFF0C\u4E14\u672A\u627E\u5230\u53EF\u7528\u7684\u79C1\u5BC6\u914D\u7F6E\u3002" : "\u672A\u627E\u5230 API Key \u6216\u79C1\u5BC6\u914D\u7F6E\u3002";
   throw new McpToolError(
-    `${reason}\u72EC\u7ACB\u6A21\u5F0F\u914D\u7F6E\u65B9\u6CD5\uFF1A\u5C06 provider.example \u590D\u5236\u5230\u63D2\u4EF6\u76EE\u5F55\u4EE5\u5916\u7684\u79C1\u5BC6\u4F4D\u7F6E\u5E76\u586B\u5165 Key\uFF0C\u7136\u540E\u8FD0\u884C node scripts/configure.mjs --profile <\u76EE\u5F55> --mode independent --env-file <\u8BE5\u6587\u4EF6\u7EDD\u5BF9\u8DEF\u5F84>\u3002\u9884\u671F\u914D\u7F6E\u4F4D\u7F6E\uFF1A${expected}\u3002`,
+    `${reason}\u914D\u7F6E\u65B9\u6CD5\uFF1ADFSC \u5185\u8BF7\u5728\u63D2\u4EF6\u4E2D\u5FC3\u672C\u63D2\u4EF6\u914D\u7F6E\u9875\u586B\u5199\uFF1B\u5176\u4ED6\u573A\u666F\u5C06 provider.example \u590D\u5236\u5230\u63D2\u4EF6\u76EE\u5F55\u4EE5\u5916\u7684\u79C1\u5BC6\u4F4D\u7F6E\u5E76\u586B\u5165 Key\uFF0C\u7136\u540E\u8FD0\u884C node scripts/configure.mjs --profile <\u76EE\u5F55> --mode independent --env-file <\u8BE5\u6587\u4EF6\u7EDD\u5BF9\u8DEF\u5F84>\u3002\u9884\u671F\u914D\u7F6E\u4F4D\u7F6E\uFF1A${expected}\u3002`,
     { code: "CONFIG_ERROR" }
   );
 }
 async function loadConfig(env = process.env, options = {}) {
   const pluginRoot = options.pluginRoot ?? PLUGIN_ROOT;
+  if (isManagedInstall(pluginRoot)) {
+    return loadManagedConfig(pluginRoot);
+  }
   const directKey = firstNonEmpty(env, API_KEY_ENV_CANDIDATES);
-  if (directKey && directKey !== PLACEHOLDER_KEY) {
-    return buildConfig({ ...env, apiKey: directKey });
+  if (directKey && !PLACEHOLDER_KEYS.includes(directKey)) {
+    return buildConfig({
+      mode: env.STEPAUDIO_MODE,
+      baseUrl: env.STEPAUDIO_BASE_URL,
+      model: env.STEPAUDIO_MODEL,
+      apiKey: directKey,
+      outputDir: env.STEPAUDIO_OUTPUT_DIR,
+      voice: env.STEPAUDIO_VOICE,
+      instruction: env.STEPAUDIO_INSTRUCTION,
+      responseFormat: env.STEPAUDIO_RESPONSE_FORMAT
+    });
   }
   const candidates = privateConfigCandidates(env, pluginRoot);
   const existing = [];
@@ -17188,7 +17380,9 @@ async function loadConfig(env = process.env, options = {}) {
     } catch {
     }
   }
-  if (existing.length === 0) throw missingConfigError(directKey === PLACEHOLDER_KEY, candidates);
+  if (existing.length === 0) {
+    throw missingConfigError(PLACEHOLDER_KEYS.includes(directKey ?? ""), candidates);
+  }
   const configPath = existing[0];
   const raw = await readBoundedText(configPath, MAX_CONFIG_BYTES, "\u79C1\u5BC6\u914D\u7F6E\u6587\u4EF6");
   let parsed;
@@ -17199,7 +17393,7 @@ async function loadConfig(env = process.env, options = {}) {
   }
   if (parsed?.schemaVersion === 2 && parsed.mode === "dfsc") {
     throw new McpToolError(
-      "\u8DDF\u968F DFSC \u6A21\u5F0F\u9700\u8981 DFSC \u5BBF\u4E3B\u63D0\u4F9B StepAudio \u6865\u63A5\uFF08host.json\uFF09\uFF0C\u5F53\u524D\u5BBF\u4E3B\u4E0D\u652F\u6301\u8BE5\u6865\u63A5\u3002\u8BF7\u6539\u7528\u72EC\u7ACB\u6A21\u5F0F\uFF1Anode scripts/configure.mjs --profile <\u76EE\u5F55> --mode independent --env-file <\u79C1\u5BC6 env \u6587\u4EF6>\u3002",
+      "\u79C1\u5BC6\u914D\u7F6E\u58F0\u660E\u4E86\u8DDF\u968F DFSC \u6A21\u5F0F\uFF08mode=dfsc\uFF09\uFF1A\u672C\u63D2\u4EF6\u4E0D\u8D70\u5BBF\u4E3B\u8D26\u6237\u6865\u63A5\uFF0C\u8BF7\u5728 DFSC \u63D2\u4EF6\u4E2D\u5FC3\u914D\u7F6E\uFF0C\u6216\u6539\u7528\u72EC\u7ACB Key\u3002",
       { code: "CONFIG_ERROR" }
     );
   }
@@ -17222,13 +17416,22 @@ async function loadConfig(env = process.env, options = {}) {
   }
   const settings = parseEnvFile(await readBoundedText(envFile, MAX_ENV_FILE_BYTES, "\u79C1\u5BC6 env \u6587\u4EF6"));
   const key = firstNonEmpty(settings, API_KEY_ENV_CANDIDATES);
-  if (!key || key === PLACEHOLDER_KEY) {
+  if (!key || PLACEHOLDER_KEYS.includes(key)) {
     throw new McpToolError(
       `\u79C1\u5BC6 env \u6587\u4EF6\u672A\u8BBE\u7F6E API Key\uFF08${API_KEY_ENV_CANDIDATES.join(" \u6216 ")}\uFF09\uFF1A${envFile}`,
       { code: "CONFIG_ERROR" }
     );
   }
-  return buildConfig({ ...settings, apiKey: key });
+  return buildConfig({
+    mode: settings.STEPAUDIO_MODE,
+    baseUrl: settings.STEPAUDIO_BASE_URL,
+    model: settings.STEPAUDIO_MODEL,
+    apiKey: key,
+    outputDir: settings.STEPAUDIO_OUTPUT_DIR,
+    voice: settings.STEPAUDIO_VOICE,
+    instruction: settings.STEPAUDIO_INSTRUCTION,
+    responseFormat: settings.STEPAUDIO_RESPONSE_FORMAT
+  });
 }
 
 // src/client.js
@@ -17365,7 +17568,7 @@ function textResult(payload) {
 }
 
 // src/tools/text-to-speech.js
-var RESPONSE_FORMATS = ["mp3", "wav", "flac", "opus", "pcm"];
+var RESPONSE_FORMATS2 = ["mp3", "wav", "flac", "opus", "pcm"];
 var SAMPLE_RATES = [8e3, 16e3, 22050, 24e3, 48e3];
 var INSTRUCTION_LIMITS = {
   "stepaudio-2.5-tts": 200,
@@ -17378,17 +17581,17 @@ var definition = {
     type: "object",
     properties: {
       text: { type: "string", description: "\u8981\u5408\u6210\u7684\u6587\u672C\uFF0C\u6700\u5927 1000 \u5B57\u7B26\u3002\u62EC\u53F7 () \u5185\u5185\u5BB9\u4F5C\u4E3A\u6307\u4EE4\u5904\u7406\u3001\u4E0D\u53D1\u97F3\u3002" },
-      voice: { type: "string", description: "\u97F3\u8272 ID\uFF0C\u5B98\u65B9\u97F3\u8272\u6216\u5DF2\u590D\u523B\u97F3\u8272\uFF08\u53EF\u7528 list_voices \u67E5\u8BE2\uFF09\u3002" },
-      model: { type: "string", description: "\u6A21\u578B\uFF0C\u5982 stepaudio-2.5-tts / stepaudio-3-tts / step-tts-2 / step-tts-mini\u3002" },
-      instruction: { type: "string", description: "\u5168\u5C40\u81EA\u7136\u8BED\u8A00\u6307\u5BFC\uFF08\u60C5\u7EEA\u57FA\u8C03\u3001\u4EBA\u8BBE\uFF09\uFF0Cstepaudio-2.5-tts \u4E0A\u9650 200 \u5B57\u7B26\u3002" },
-      response_format: { type: "string", enum: RESPONSE_FORMATS, description: "\u97F3\u9891\u683C\u5F0F\uFF0C\u9ED8\u8BA4 mp3\u3002" },
+      voice: { type: "string", description: "\u97F3\u8272 ID\uFF08\u5B98\u65B9\u6216\u5DF2\u590D\u523B\uFF0C\u53EF\u7528 list_voices \u67E5\u8BE2\uFF09\u3002\u7F3A\u7701\u65F6\u4F7F\u7528\u914D\u7F6E\u4E2D\u7684\u9ED8\u8BA4\u97F3\u8272\u3002" },
+      model: { type: "string", description: "\u6A21\u578B\uFF0C\u5982 stepaudio-2.5-tts / stepaudio-3-tts / step-tts-2 / step-tts-mini\uFF1B\u7F3A\u7701\u7528\u914D\u7F6E\u503C\u3002" },
+      instruction: { type: "string", description: "\u5168\u5C40\u81EA\u7136\u8BED\u8A00\u6307\u5BFC\uFF08\u60C5\u7EEA\u57FA\u8C03\u3001\u4EBA\u8BBE\uFF09\uFF0Cstepaudio-2.5-tts \u4E0A\u9650 200 \u5B57\u7B26\uFF1B\u7F3A\u7701\u7528\u914D\u7F6E\u503C\u3002" },
+      response_format: { type: "string", enum: RESPONSE_FORMATS2, description: "\u97F3\u9891\u683C\u5F0F\uFF0C\u7F3A\u7701\u7528\u914D\u7F6E\u503C\uFF08\u9ED8\u8BA4 mp3\uFF09\u3002" },
       speed: { type: "number", description: "\u8BED\u901F 0.5~2\uFF0C\u9ED8\u8BA4 1.0\u3002" },
       volume: { type: "number", description: "\u97F3\u91CF 0.1~2.0\uFF0C\u9ED8\u8BA4 1.0\u3002" },
       sample_rate: { type: "integer", enum: SAMPLE_RATES, description: "\u91C7\u6837\u7387\uFF0C\u9ED8\u8BA4 24000\u3002" },
       output_path: { type: "string", description: "\u8F93\u51FA\u6587\u4EF6\u8DEF\u5F84\uFF08\u7EDD\u5BF9\u6216\u76F8\u5BF9\uFF09\uFF1B\u7F3A\u7701\u5199\u5165\u63D2\u4EF6 output \u76EE\u5F55\u3002" },
       return_url: { type: "boolean", description: "true \u65F6\u4E0D\u843D\u76D8\uFF0C\u8FD4\u56DE\u4E0A\u6E38\u6587\u4EF6 URL\uFF0812 \u5C0F\u65F6\u6709\u6548\uFF09\u4E0E\u5B57\u5E55\uFF08\u5982\u6709\uFF09\u3002" }
     },
-    required: ["text", "voice"]
+    required: ["text"]
   }
 };
 async function handler(args, ctx) {
@@ -17398,11 +17601,13 @@ async function handler(args, ctx) {
   if (text.length > 1e3) {
     throw new McpToolError(`text \u8D85\u957F\uFF1A${text.length} \u5B57\u7B26\uFF0C\u4E0A\u9650 1000`, { code: "INVALID_ARGS" });
   }
-  const voice = String(args.voice ?? "").trim();
-  if (voice === "") throw new McpToolError("voice \u4E0D\u80FD\u4E3A\u7A7A", { code: "INVALID_ARGS" });
+  const voice = (String(args.voice ?? "").trim() || config2.voice || "").trim();
+  if (voice === "") {
+    throw new McpToolError("voice \u4E0D\u80FD\u4E3A\u7A7A\uFF1A\u8BF7\u6309\u6B21\u6307\u5B9A\uFF0C\u6216\u5728\u914D\u7F6E\u4E2D\u8BBE\u7F6E\u9ED8\u8BA4\u97F3\u8272", { code: "INVALID_ARGS" });
+  }
   const model = args.model ?? config2.model;
-  const instruction = args.instruction;
-  if (instruction !== void 0) {
+  const instruction = args.instruction ?? config2.instruction;
+  if (instruction !== void 0 && instruction !== "") {
     const limit = INSTRUCTION_LIMITS[model];
     if (limit !== void 0 && instruction.length > limit) {
       throw new McpToolError(`instruction \u8D85\u957F\uFF1A${instruction.length} \u5B57\u7B26\uFF0C\u6A21\u578B ${model} \u4E0A\u9650 ${limit}`, {
@@ -17410,7 +17615,7 @@ async function handler(args, ctx) {
       });
     }
   }
-  const responseFormat = args.response_format ?? "mp3";
+  const responseFormat = (args.response_format ?? config2.responseFormat ?? "mp3").toLowerCase();
   const returnUrl = args.return_url === true;
   const params = cleanParams({
     model,
@@ -17626,6 +17831,9 @@ async function main() {
   try {
     config2 = await loadConfig(process.env);
     client = new StepAudioClient(config2);
+    if (config2.managed) {
+      await config2.reader.current();
+    }
   } catch (error2) {
     configError = error2 instanceof Error ? error2.message : String(error2);
     log(`\u914D\u7F6E\u672A\u5C31\u7EEA\uFF1A${configError}`);
@@ -17643,6 +17851,16 @@ async function main() {
     const name = request.params.name;
     const tool = TOOLS.find((candidate) => candidate.definition.name === name);
     if (!tool) return errorResult(`\u672A\u77E5\u5DE5\u5177\uFF1A${name}`);
+    if (config2.managed) {
+      try {
+        const snapshot = await config2.reader.current();
+        if (snapshot.revision !== config2.revision) {
+          return errorResult("\u914D\u7F6E\u5DF2\u5728\u63D2\u4EF6\u4E2D\u5FC3\u53D8\u66F4\uFF0C\u8BF7\u91CD\u542F\u670D\u52A1\u540E\u91CD\u8BD5\u3002");
+        }
+      } catch {
+        return errorResult("\u914D\u7F6E\u4E0D\u53EF\u7528\u6216\u5DF2\u53D8\u66F4\uFF0C\u8BF7\u5728\u63D2\u4EF6\u4E2D\u5FC3\u91CD\u65B0\u4FDD\u5B58\u914D\u7F6E\u5E76\u91CD\u542F\u670D\u52A1\u3002");
+      }
+    }
     try {
       return await tool.handler(request.params.arguments ?? {}, { client, config: config2 });
     } catch (error2) {

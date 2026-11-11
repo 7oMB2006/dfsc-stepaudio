@@ -15,8 +15,7 @@ import {
 
 import { loadConfig } from './config.js';
 import { StepAudioClient } from './client.js';
-import { McpToolError } from './lib/errors.js';
-import * as textToSpeech from './tools/text-to-speech.js';
+import { McpToolError } from './lib/errors.js';import * as textToSpeech from './tools/text-to-speech.js';
 import * as listVoices from './tools/list-voices.js';
 import * as cloneVoice from './tools/clone-voice.js';
 
@@ -40,6 +39,10 @@ async function main() {
   try {
     config = await loadConfig(process.env);
     client = new StepAudioClient(config);
+    if (config.managed) {
+      // 落定首个 revision（官方 stamp 机制）：进程之后不静默采用新 revision
+      await config.reader.current();
+    }
   } catch (error) {
     configError = error instanceof Error ? error.message : String(error);
     log(`配置未就绪：${configError}`);
@@ -60,6 +63,17 @@ async function main() {
     const name = request.params.name;
     const tool = TOOLS.find((candidate) => candidate.definition.name === name);
     if (!tool) return errorResult(`未知工具：${name}`);
+    if (config.managed) {
+      // 每次调用前复审：revision 变化或读取失败都只让本次调用失败，服务不退出
+      try {
+        const snapshot = await config.reader.current();
+        if (snapshot.revision !== config.revision) {
+          return errorResult('配置已在插件中心变更，请重启服务后重试。');
+        }
+      } catch {
+        return errorResult('配置不可用或已变更，请在插件中心重新保存配置并重启服务。');
+      }
+    }
     try {
       return await tool.handler(request.params.arguments ?? {}, { client, config });
     } catch (error) {
