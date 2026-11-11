@@ -1,0 +1,7 @@
+node_modules/
+output/
+.env
+*.log
+test-results/
+# 注意：dist/ 是提交进仓库的自包含构建产物（市场安装不执行 npm install），
+# 由 npm run build 生成，不要加入忽略列表。
