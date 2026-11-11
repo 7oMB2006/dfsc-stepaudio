@@ -21,7 +21,7 @@ import * as listVoices from './tools/list-voices.js';
 import * as cloneVoice from './tools/clone-voice.js';
 
 const TOOLS = [textToSpeech, listVoices, cloneVoice];
-const SERVER_INFO = { name: 'dfsc-stepaudio', version: '0.1.0' };
+const SERVER_INFO = { name: 'dfsc-stepaudio', version: '0.2.0' };
 
 function log(message) {
   // stdio 传输下 stdout 是 JSON-RPC 通道，日志只能走 stderr

@@ -37,8 +37,34 @@ test('step.plugin.json 符合社区 MCP 插件契约', async () => {
     await fileExists(path.join(PLUGIN_ROOT, server.args[0])),
     `入口文件存在：${server.args[0]}（缺失请先 npm run build）`,
   );
-  assert.equal(server.env.STEPFUN_API_KEY, 'stepaudio-managed-provider-context');
+  assert.equal(server.env.STEPFUN_API_KEY, 'DFSC_INDEPENDENT_PLUGIN');
   assert.ok(server.startup_timeout_sec > 0 && server.tool_timeout_sec > 0);
+});
+
+test('dfsc.settings.json 消费者与清单声明一致', async () => {
+  const manifest = JSON.parse(await fs.readFile(path.join(PLUGIN_ROOT, 'step.plugin.json'), 'utf8'));
+  const settings = JSON.parse(await fs.readFile(path.join(PLUGIN_ROOT, 'dfsc.settings.json'), 'utf8'));
+
+  assert.equal(settings.schemaVersion, 1);
+  assert.equal(settings.consumer.kind, 'json-file-v1');
+  assert.ok(
+    Object.keys(manifest.mcpServers).includes(settings.consumer.server),
+    `consumer.server 必须是 mcpServers 的键名：${settings.consumer.server}`,
+  );
+
+  const fieldIds = settings.groups.flatMap((group) => group.fields.map((field) => field.id));
+  assert.equal(new Set(fieldIds).size, fieldIds.length, '字段 ID 不重复');
+  for (const field of settings.groups.flatMap((group) => group.fields)) {
+    assert.match(field.id, /^[a-z][a-z0-9_-]{0,47}$/, `字段 ID 格式：${field.id}`);
+    assert.ok(typeof field.label === 'string' && field.label !== '', `字段 label 非空：${field.id}`);
+    assert.ok(['text', 'number', 'enum', 'boolean', 'secret', 'path'].includes(field.type), `字段 type 合法：${field.id}`);
+    if (field.type === 'secret') {
+      assert.ok(field.default === undefined, `secret 字段不得有 default：${field.id}`);
+    }
+    if (field.type === 'enum') {
+      assert.ok(Array.isArray(field.options) && field.options.length > 0, `enum 必须带 options：${field.id}`);
+    }
+  }
 });
 
 test('dfsc.plugin.json 分类与关键词契约', async () => {
