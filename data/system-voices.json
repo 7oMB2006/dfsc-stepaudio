@@ -1,5 +1,5 @@
 {
-  "$comment": "官方音色目录。来源：阶跃开放平台文档 GET /v1/audio/system_voices?model=step-tts-2 返回示例（platform.stepfun.com/docs/zh/api-reference/audio/system-voices）。list_voices 工具在官方接口不可用（如 stepaudio-2.5-tts 模型暂不支持该系统查询）时以此兜底。",
+  "$comment": "官方音色目录。来源：阶跃开放平台文档 GET /v1/audio/system_voices?model=step-tts-2 返回示例（platform.stepfun.com/docs/zh/api-reference/audio/system-voices）。voices 共 39 个 ID 全部来自官方；voices-details 仅保留官方实际给出的 37 条，yingwennansheng / yingwennvsheng 在官方示例中无详情条目（官方约定部分音色名称为空串），不做本地补名。list_voices 工具在官方接口不可用时以此兜底，实时数据以 API 返回为准。",
   "voices": [
     "boyinnansheng",
     "cixingnansheng",
@@ -196,16 +196,6 @@
       "voice-name": "温柔熟女",
       "voice-description": "女，成熟稳重，温柔有亲和力",
       "recommended_scene": "客服与业务办理、口播（解说、新闻）、教育与培训"
-    },
-    "yingwennansheng": {
-      "voice-name": "英文男声",
-      "voice-description": "男，英文音色",
-      "recommended_scene": "英文内容配音"
-    },
-    "yingwennvsheng": {
-      "voice-name": "英文女声",
-      "voice-description": "女，英文音色",
-      "recommended_scene": "英文内容配音"
     },
     "youyanvsheng": {
       "voice-name": "优雅女声",
