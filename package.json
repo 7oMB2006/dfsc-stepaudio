@@ -8,7 +8,7 @@
     "dfsc-stepaudio": "dist/index.js"
   },
   "scripts": {
-    "build": "esbuild src/index.js --bundle --platform=node --format=esm --target=node20 --outfile=dist/index.js --log-level=warning",
+    "build": "node scripts/build.mjs",
     "start": "node src/index.js",
     "test": "node --test \"test/*.test.js\"",
     "pretest": "npm run build",

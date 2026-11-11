@@ -17132,7 +17132,8 @@ function buildConfig(settings) {
     baseUrl,
     apiKey,
     model: settings.STEPAUDIO_MODEL?.trim() || "stepaudio-2.5-tts",
-    outputDir: path.resolve(settings.STEPAUDIO_OUTPUT_DIR?.trim() || path.join(PLUGIN_ROOT, "output"))
+    outputDir: path.resolve(settings.STEPAUDIO_OUTPUT_DIR?.trim() || path.join(PLUGIN_ROOT, "output")),
+    pluginRoot: PLUGIN_ROOT
   };
 }
 function isInside(root, target) {
@@ -17454,16 +17455,8 @@ __export(list_voices_exports, {
 });
 import { promises as fs4 } from "node:fs";
 import path4 from "node:path";
-import { fileURLToPath as fileURLToPath2 } from "node:url";
-var CATALOG_PATH = path4.resolve(
-  path4.dirname(fileURLToPath2(import.meta.url)),
-  "..",
-  "..",
-  "data",
-  "system-voices.json"
-);
-async function loadLocalCatalog() {
-  const raw = await fs4.readFile(CATALOG_PATH, "utf8");
+async function loadLocalCatalog(pluginRoot) {
+  const raw = await fs4.readFile(path4.join(pluginRoot, "data", "system-voices.json"), "utf8");
   const parsed = JSON.parse(raw);
   return parsed.voices.map((id) => ({
     id,
@@ -17472,7 +17465,7 @@ async function loadLocalCatalog() {
     scene: parsed["voices-details"]?.[id]?.recommended_scene ?? ""
   }));
 }
-async function listOfficial(client) {
+async function listOfficial(client, pluginRoot) {
   try {
     const result = await client.systemVoices("step-tts-2");
     const details = result["voices-details"] ?? {};
@@ -17486,7 +17479,7 @@ async function listOfficial(client) {
       }))
     };
   } catch {
-    return { source: "local-catalog", voices: await loadLocalCatalog() };
+    return { source: "local-catalog", voices: await loadLocalCatalog(pluginRoot) };
   }
 }
 async function listCloned(client, { limit, order }) {
@@ -17513,17 +17506,18 @@ async function handler2(args, ctx) {
   const { client } = ctx;
   const scope = args.scope ?? "official";
   const page = cleanParams({ limit: args.limit, order: args.order });
+  const pluginRoot = ctx.config.pluginRoot;
   if (scope === "cloned") {
     return textResult({ cloned: await listCloned(client, page) });
   }
   if (scope === "all") {
     const [official, cloned] = await Promise.all([
-      listOfficial(client),
+      listOfficial(client, pluginRoot),
       listCloned(client, page).catch((error2) => ({ source: "error", error: error2.message }))
     ]);
     return textResult({ official, cloned });
   }
-  return textResult({ official: await listOfficial(client) });
+  return textResult({ official: await listOfficial(client, pluginRoot) });
 }
 
 // src/tools/clone-voice.js

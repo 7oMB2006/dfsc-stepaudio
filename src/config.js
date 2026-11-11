@@ -73,6 +73,7 @@ function buildConfig(settings) {
     apiKey,
     model: settings.STEPAUDIO_MODEL?.trim() || 'stepaudio-2.5-tts',
     outputDir: path.resolve(settings.STEPAUDIO_OUTPUT_DIR?.trim() || path.join(PLUGIN_ROOT, 'output')),
+    pluginRoot: PLUGIN_ROOT,
   };
 }
 

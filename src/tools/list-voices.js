@@ -1,18 +1,11 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { cleanParams, textResult } from './shared.js';
 
-const CATALOG_PATH = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '..',
-  '..',
-  'data',
-  'system-voices.json',
-);
-
-async function loadLocalCatalog() {
-  const raw = await fs.readFile(CATALOG_PATH, 'utf8');
+// 插件根由调用方通过 ctx.config.pluginRoot 传入：config.js 的推导在 src/ 与 dist/ 两种布局下都正确，
+// 不能用本模块的 import.meta.url 推（src/tools 与 dist 的深度不同，打包后会指向包外）。
+async function loadLocalCatalog(pluginRoot) {
+  const raw = await fs.readFile(path.join(pluginRoot, 'data', 'system-voices.json'), 'utf8');
   const parsed = JSON.parse(raw);
   return parsed.voices.map((id) => ({
     id,
@@ -22,7 +15,7 @@ async function loadLocalCatalog() {
   }));
 }
 
-async function listOfficial(client) {
+async function listOfficial(client, pluginRoot) {
   try {
     const result = await client.systemVoices('step-tts-2');
     const details = result['voices-details'] ?? {};
@@ -37,7 +30,7 @@ async function listOfficial(client) {
     };
   } catch {
     // 官方接口不可用（如当前模型不支持该系统查询）时，用内置目录兜底
-    return { source: 'local-catalog', voices: await loadLocalCatalog() };
+    return { source: 'local-catalog', voices: await loadLocalCatalog(pluginRoot) };
   }
 }
 
@@ -68,16 +61,17 @@ export async function handler(args, ctx) {
   const { client } = ctx;
   const scope = args.scope ?? 'official';
   const page = cleanParams({ limit: args.limit, order: args.order });
+  const pluginRoot = ctx.config.pluginRoot;
 
   if (scope === 'cloned') {
     return textResult({ cloned: await listCloned(client, page) });
   }
   if (scope === 'all') {
     const [official, cloned] = await Promise.all([
-      listOfficial(client),
+      listOfficial(client, pluginRoot),
       listCloned(client, page).catch((error) => ({ source: 'error', error: error.message })),
     ]);
     return textResult({ official, cloned });
   }
-  return textResult({ official: await listOfficial(client) });
+  return textResult({ official: await listOfficial(client, pluginRoot) });
 }

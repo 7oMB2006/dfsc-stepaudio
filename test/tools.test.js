@@ -3,9 +3,12 @@ import assert from 'node:assert/strict';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import * as tts from '../src/tools/text-to-speech.js';
 import * as listVoices from '../src/tools/list-voices.js';
 import * as cloneVoice from '../src/tools/clone-voice.js';
+
+const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 let outputDir;
 
@@ -63,6 +66,7 @@ function makeCtx(overrides = {}) {
         apiKey: 'k',
         model: 'stepaudio-2.5-tts',
         outputDir,
+        pluginRoot: PLUGIN_ROOT,
       },
     },
   };
@@ -191,6 +195,23 @@ test('clone_voice preview=true 保存试听音频', async () => {
   assert.match(payload.preview_file, /\.wav$/);
   const content = await fs.readFile(payload.preview_file);
   assert.equal(content.toString(), 'WAVDATA');
+});
+
+test('list_voices 本地目录兜底从 ctx 传入的插件根读取（打包布局回归）', async () => {
+  // 回归：兜底目录曾用模块相对路径计算，打包进 dist/index.js 后会指向包外。
+  // 现在必须从 ctx.config.pluginRoot 读取——用一个临时根里的最小目录验证。
+  const fakeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'dfsc-stepaudio-catalog-'));
+  await fs.mkdir(path.join(fakeRoot, 'data'), { recursive: true });
+  await fs.writeFile(
+    path.join(fakeRoot, 'data', 'system-voices.json'),
+    JSON.stringify({ voices: ['fake-voice'], 'voices-details': { 'fake-voice': { 'voice-name': '假音色' } } }),
+  );
+  const { ctx } = makeCtx({ systemVoicesError: true });
+  ctx.config.pluginRoot = fakeRoot;
+  const payload = payloadOf(await listVoices.handler({}, ctx));
+  assert.equal(payload.official.source, 'local-catalog');
+  assert.deepEqual(payload.official.voices, [{ id: 'fake-voice', name: '假音色', description: '', scene: '' }]);
+  await fs.rm(fakeRoot, { recursive: true, force: true });
 });
 
 test('clone_voice 参数校验', async () => {
