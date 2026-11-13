@@ -85,13 +85,23 @@ node scripts\configure.mjs --profile <私密目录> --check
 
 ```sh
 npm install      # 仅开发依赖：@modelcontextprotocol/sdk 与 esbuild（用户机器不需要）
-npm test         # pretest 自动 npm run build，再跑 node --test（46 个用例）
+npm test         # pretest 自动 npm run build，再跑 node --test（61 个用例）
 npm run build    # 单独打包：esbuild src/index.js -> dist/index.js
 npm run smoke    # stdio 冒烟（启动 dist 产物）：initialize → tools/list → 错误路径
 node scripts/make-icon.mjs   # 重新生成 icon.png
 ```
 
 `dist/index.js` 是**提交进仓库的分发产物**（市场安装不执行 `npm install`，`.gitignore` 明确不忽略它）；改完 `src/` 必须重新 build 并提交，协议测试与冒烟都只认 dist 产物。
+
+## 本机试用
+
+日用 DFSC 若为 2026-11-09 之前构建（缺插件中心声明式配置），直接安装会报“宿主不支持”。可跑独立试用实例（需本机已构建宿主包，见 `docs/host-build.md`）：
+
+```sh
+node scripts/trial-launch.mjs
+```
+
+首次运行在 `D:\StepFun\dfsc-trial-profile` 创建独立 profile、静默安装插件并启动实例；重跑即直接启动。启动后：登录 Step 账号 → 插件中心填 API Key → 保存 → 重启会话 → 对话里直接使唤。删除该目录即重置。真机验收结果见 `docs/acceptance-runbook.md`（17/17 通过）。
 
 目录结构、市场收录流程与宿主兼容边界见 [docs/dfsc-integration.md](docs/dfsc-integration.md)。
 
