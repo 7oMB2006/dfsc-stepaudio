@@ -1,0 +1,10 @@
+{
+  "name": "dfsc-stepaudio-local",
+  "plugins": [
+    {
+      "name": "dfsc-stepaudio",
+      "source": ".",
+      "description": "阶跃 StepAudio 语音：文本转语音、音色列表、音色复刻的 MCP 服务（本地验收/联调用市场源）"
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+# 真机安装验收 Runbook（0.2.0）
+
+> 目的：在市场收录前，用真实 DFSC 宿主验证 0.2.0 的安装、配置、合成与 fail-closed 全链。
+> 隔离机制（抄官方 `integration/verify-dfsc.mjs`）：以 `DESKTOP_TEST_USER_DATA=<临时目录>` 启动 DFSC，**不动真实profile**。
+
+## 0. 前置条件
+
+| 项 | 要求 |
+| --- | --- |
+| DFSC 构建 | 包含 #215–#238 的 main 构建（设置页、托管读取、兼容更新都靠这些；`0.6.0` 版本号本身不证明包含） |
+| Node.js | PATH 上 20+（宿主 runtime 为 24） |
+| 凭据 | 一个可用的 Step Plan 或开放平台 API Key（真实合成用；前 5 步用假 Key 也能过） |
+| 本插件 | 当前提交已 `npm run build` 且测试全绿 |
+
+## 1. 启动隔离实例
+
+```powershell
+$profile = New-Item -ItemType Directory -Path "$env:TEMP\dfsc-accept-$(Get-Random)" -Force
+# 参照官方种子：关闭遥测、fixture 提供商（聊天侧不需要真实账户）
+New-Item -ItemType Directory -Path "$profile\step-runtime" -Force
+'defaultProvider = "fixture"
+defaultModel = "fixture"
+[telemetry]
+enabled = false' | Set-Content "$profile\step-runtime\config.toml"
+$env:DESKTOP_TEST_USER_DATA = $profile.FullName
+$env:DESKTOP_TEST_NO_FOCUS = '1'
+# 然后启动 DFSC 可执行文件
+```
+
+## 2. 安装（本地市场源）
+
+1. DFSC「设置 → 插件 → 市场来源 → 添加市场」→ 选**本地目录**，指向本仓库根（含 `.step-plugin/marketplace.json`，已备好）。
+2. 「发现」应出现 **dfsc-stepaudio 0.2.0**（作者/版本/外部依赖 Node.js 展示正常即说明 #230 元数据链路通）。
+3. 安装 → 按提示重载会话。
+
+## 3. 设置页渲染（插件中心）
+
+打开插件详情 → 配置，核对：
+
+- [ ] 两个分组（连接 / 合成默认值）共 8 个字段全部渲染，中文标签与帮助文字正常
+- [ ] `api_key` 是密码输入框；`output_dir` 是目录选择器
+- [ ] **不填 Key 时保存**：应被 required 拦截（或保存后工具调用报“缺少 API Key”并指引本页）
+
+## 4. 真实合成（核心路径）
+
+1. 填真实 Key（模式 `openapi` + 开放平台地址，或 `stepplan`），保存，按提示重启会话。
+2. 会话里对 agent 说：“用 `cixingnansheng` 念：智能阶跃，十倍每一个人的可能。”
+3. 核对：
+   - [ ] 返回音频文件绝对路径，文件存在可播放
+   - [ ] 默认输出目录 = 设置里填的目录（或未填时的系统临时目录，**不在插件包内**）
+   - [ ] 提供方账户侧能看到本次调用计费（证明 Key 真的到了上游）
+4. 再验证默认值：设置里填 `voice=linjiajiejie` 后重启，说“念一句你好”——应使用新默认音色。
+
+## 5. Fail-closed 与生命周期
+
+- [ ] **改设置不重启**：保存后（不重启会话）再次合成 → 应返回“配置已变更，请重启服务”，**不**用旧值静默成功
+- [ ] **重启后生效**：重启会话后用新设置合成成功
+- [ ] **停用/启用**：服务开关停用后 MCP 不可用；启用+重启后恢复
+- [ ] **卸载**：卸载后插件与 MCP 声明移除；**重装不继承旧 Key**（新实例需重新填写）
+- [ ] **更新兼容**（如市场里有旧版本可更）：验证“检查更新”入口行为（0.2.0 为首个市场版本时此项跳过）
+
+## 6. 证据留存
+
+每步截图 + DFSC 日志，统一存到 `acceptance-evidence/<日期>/`（**不要提交进仓库**——含真实 Key 的页面必须打码或避开）。通过标准：第 3–5 步全部打勾。
+
+## 7. 通过后
+
+1. 在 `dfsc.plugin.json` 补 `requirements.dfsc`（填写本次验证过的宿主版本范围）
+2. 按 `docs/market-submission.md` 推送仓库、刷新 SHA、提 registry PR
+3. 决定 `.step-plugin/marketplace.json` 去留（保留可让用户直接以本地市场源安装本仓库；社区快照会含此文件）
+
+## 已知不做（边界）
+
+- 真实计费金额核对、ASR/Realtime 等其他模型能力（本插件只做 TTS）
+- macOS / 非 Windows 自动释放（宿主侧能力，与插件无关）
+- WebUI 工作台（0.3.0 范围）
