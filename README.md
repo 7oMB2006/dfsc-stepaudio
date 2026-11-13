@@ -18,32 +18,43 @@ DFSC 社区插件：把阶跃自家 **StepAudio TTS** 封装成标准 MCP 服务
 
 收录前也可本地联调：在 DFSC 的 MCP 配置里指向本目录的 `dist/index.js`。
 
-## 配置：独立模式（当前唯一可用方式）
+## 配置
 
-市场安装场景下 `mcpServers.env` 只有占位符 `stepaudio-managed-provider-context`，且按社区约定写在宿主注入登录凭据所使用的变量 **`STEPFUN_API_KEY`** 上（写在其他变量名无法阻止宿主把真实凭据注入 MCP 子进程）。真实 Key 保存在**插件目录之外**的私密 env 文件中：
+### DFSC 内（推荐）：插件中心设置页
 
-```powershell
-# 1. 复制模板到插件目录以外的私密位置并填入 Key
-copy provider.example D:\Private\stepaudio\provider.env
+在 DFSC 插件中心打开本插件的配置页直接填写，Key 由宿主保管（密码输入、不回显、只存宿主私密目录）：
 
-# 2. 写入私密配置（<profile>\stepaudio\config.json 指向该 env 文件）
-node scripts\configure.mjs --profile D:\Private\stepaudio --mode independent --env-file D:\Private\stepaudio\provider.env
+| 设置项 | 说明 |
+| --- | --- |
+| 后端模式 | `stepplan` = Step Plan 登录态额度；`openapi` = 开放平台或任意 OpenAI 兼容网关 |
+| 接口地址 | 留空按模式默认：`https://api.stepfun.com/step_plan/v1` 或 `https://api.stepfun.com/v1` |
+| 默认模型 | `stepaudio-2.5-tts` / `stepaudio-3-tts` / `step-tts-2` / `step-tts-mini` |
+| API Key | 必填；按所选渠道计费，不随聊天账户切换 |
+| 输出目录 | 音频文件输出目录；留空使用系统临时目录（**请勿指向插件包内目录**） |
+| 默认音色 / 默认语境 / 输出格式 | 合成默认值；每次合成时按次指定则优先于默认值 |
 
-# 3. 复查（不发起任何提供商请求）
-node scripts\configure.mjs --profile D:\Private\stepaudio --check
-```
+保存后按提示重启会话生效。修改已安装实例的配置不需要重装插件。
 
-然后在 DFSC 中重载会话。服务按以下顺序解析配置：
+### 其他 MCP 客户端 / 本地开发：环境变量或 CLI 私密配置
 
-1. 环境变量直填（`STEP_API_KEY` / `STEPFUN_API_KEY` / `DFSC_STEP_PLAN_API_KEY`，占位符视为未配置）
-2. 私密配置：`STEPAUDIO_CONFIG_PATH`，或安装布局下的 `<step-runtime>/stepaudio/config.json`（`STEPAUDIO_PROFILE_DIR` 可覆盖 profile 位置）
+`step.plugin.json` 的 `mcpServers.env` 只放官方哨兵 `DFSC_INDEPENDENT_PLUGIN`（写在宿主注入登录凭据的变量 `STEPFUN_API_KEY` 上，阻止自动注入）。非 DFSC 场景按以下顺序解析配置：
+
+1. 环境变量直填（`STEP_API_KEY` / `STEPFUN_API_KEY` / `DFSC_STEP_PLAN_API_KEY`；哨兵值视为未配置）
+2. 插件目录外的 CLI 私密配置：`STEPAUDIO_CONFIG_PATH`，或安装布局下的 `<step-runtime>/stepaudio/config.json`（`STEPAUDIO_PROFILE_DIR` 可覆盖 profile 位置）
 3. 都不可用 → 返回带操作指引的配置错误
 
-私密 env 文件支持的键见 `provider.example`：`STEP_API_KEY`、`STEPAUDIO_MODE`（`stepplan`=Step Plan 额度 / `openapi`=开放平台或任意 OpenAI 兼容网关）、`STEPAUDIO_BASE_URL`、`STEPAUDIO_MODEL`、`STEPAUDIO_OUTPUT_DIR`。**env 文件指向插件目录内会被拒绝**（市场快照会公开插件目录）。
+```powershell
+# 复制模板到插件目录以外的私密位置并填入 Key，再登记
+copy provider.example <私密目录>\provider.env
+node scripts\configure.mjs --profile <私密目录> --mode independent --env-file <私密目录>\provider.env
+node scripts\configure.mjs --profile <私密目录> --check
+```
 
-## 跟随 DFSC 模式（暂不可用）
+私密 env 文件支持的键见 `provider.example`。**env 文件指向插件目录内会被拒绝**（市场快照会公开插件目录）。
 
-`step.plugin.json` 的占位符对应社区约定的"跟随 DFSC 会话账户"模式：宿主在主进程代发请求，不向插件导出 Key。该能力目前是 BVR 插件专用的宿主桥接（`127.0.0.1` + `host.json` token），**DFSC 宿主尚未对 StepAudio 提供同类桥接**。检测到跟随配置时，服务会返回明确错误并指引改用独立模式；宿主支持后会随 `docs/dfsc-integration.md` 更新。
+### 托管安装的行为边界
+
+被 DFSC 安装后（位于 `<step-runtime>/plugins/dfsc-stepaudio`）：**只读宿主设置**，环境变量与 CLI 私密配置一律不参与；设置在插件中心被变更或撤销后，运行中的进程对后续调用返回“请重启服务”，不会静默使用旧配置或回退到其他来源。
 
 ## 工具参数要点
 

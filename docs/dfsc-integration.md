@@ -12,7 +12,7 @@ MCP 能力通过 `mcpServers` 段声明（字段取自 BVR 范例）：
     "stepaudio": {
       "command": "node",
       "args": ["dist/index.js"],
-      "env": { "STEPFUN_API_KEY": "stepaudio-managed-provider-context" },
+      "env": { "STEPFUN_API_KEY": "DFSC_INDEPENDENT_PLUGIN" },
       "startup_timeout_sec": 60,
       "tool_timeout_sec": 300
     }
@@ -22,14 +22,23 @@ MCP 能力通过 `mcpServers` 段声明（字段取自 BVR 范例）：
 
 - `args` 相对插件目录，指向**自包含打包产物** `dist/index.js`（官方 MCP SDK 已在开发期用 esbuild 打入，市场安装不执行 `npm install`，用户机器无任何 npm 依赖）。
 - MCP 标识为 `dfsc-stepaudio__stepaudio`（插件 ID + 服务名）。
-- `env` 里的 `stepaudio-managed-provider-context` 是**非密钥占位符**，且必须写在宿主自动注入登录凭据所使用的变量 `STEPFUN_API_KEY` 上（对齐 BVR 约定）——写在其他变量名（如 `STEP_API_KEY`）无法阻止宿主把真实凭据注入 MCP 子进程。取值等于占位符时服务视为"未配置"，转去读插件目录外的私密配置。
-- 作者路线：官方 MCP SDK 开发 → `npm run build` 打包 → 提交 `dist/` → 市场安装 → 插件目录外预置配置 → 预留更新（宿主已支持检查式更新并保留配置）。
+- `env` 里的 `DFSC_INDEPENDENT_PLUGIN` 是**官方非密钥哨兵**，必须写在宿主自动注入登录凭据所使用的变量 `STEPFUN_API_KEY` 上（对齐官方 config-starter / sdk-host-starter 范例）——写在其他变量名无法阻止宿主把真实凭据注入 MCP 子进程。取值等于任一已知哨兵（含 0.1.x 的自定义值 `stepaudio-managed-provider-context`）时服务视为"未配置"。
+- 作者路线：官方 MCP SDK 开发 → `npm run build` 打包（含 `dist/THIRD_PARTY_LICENSES.txt` 许可证归集）→ 提交 `dist/` → 市场安装 → 插件中心预置配置 → 预留更新。
 
 ## 2. 两种模式
 
-### 独立模式（当前唯一可用）
+### 托管安装（DFSC 插件中心设置，0.2.0 起主路径）
 
-`mcpServers.env` 放不了用户真实 Key，因此私密凭据保存在插件目录外：
+`dfsc.settings.json`（json-file-v1 消费者）让宿主渲染配置表单，用户在插件中心填写：
+
+- 8 字段 2 组：连接（`mode` / `base_url` / `model` / `api_key`(secret 必填) / `output_dir`(path 目录)）+ 合成默认值（`voice` / `instruction` / `response_format`）。
+- 凭据由宿主保管：渲染层只见存在性，值只从宿主私有快照读取；`src/lib/dfsc-config.mjs`（vendor 官方读取器，固定 commit 见 `UPSTREAM.md`）每次工具调用前核对实例/包指纹/schema/绑定/revision。
+- **托管布局下 env 与 CLI 私密配置一律不参与**；读取失败 fail-closed 并指引插件中心；输出目录不得在插件包内（会破坏指纹），缺省落系统临时目录。
+- 宿主 #238 合并后：设置清单的展示调整（label/help）、保留旧值的 enum 扩展、无 default 的非秘密可选新增可随插件更新平滑迁移（保留秘密/false/空串/开关）；default 增删改、必填性变化、类型变化（含 secret↔text）仍被拒绝。
+
+### 非托管场景（其他 MCP 客户端 / 本地开发）
+
+`mcpServers.env` 放不了用户真实 Key，私密凭据保存在插件目录外：
 
 ```text
 <profile>/stepaudio/config.json      # {"schemaVersion":1,"mode":"independent","envFile":"<绝对路径>"}
@@ -37,13 +46,13 @@ MCP 能力通过 `mcpServers` 段声明（字段取自 BVR 范例）：
 ```
 
 - 由 `node scripts/configure.mjs --profile <目录> --mode independent --env-file <绝对路径>` 写入，`--check` 复查，`--replace` 才允许覆盖。
-- 服务解析顺序：环境变量直填（占位符跳过）→ `STEPAUDIO_CONFIG_PATH` → 安装布局 `<step-runtime>/stepaudio/config.json`（`<step-runtime>` = 插件目录的上两级；本地开发用 `STEPAUDIO_PROFILE_DIR` 覆盖）。
+- 解析顺序：环境变量直填（哨兵跳过）→ `STEPAUDIO_CONFIG_PATH` → 安装布局 `<step-runtime>/stepaudio/config.json`（本地开发用 `STEPAUDIO_PROFILE_DIR` 覆盖）。
 - env 文件位于插件目录内一律拒绝（市场快照会公开它）；文件大小上限 128 KiB。
-- 独立模式支持 Step Plan（`https://api.stepfun.com/step_plan/v1`）、开放平台（`/v1`）与任意 OpenAI 兼容网关（`STEPAUDIO_BASE_URL` 自定义）。
+- 支持 Step Plan（`https://api.stepfun.com/step_plan/v1`）、开放平台（`/v1`）与任意 OpenAI 兼容网关（`STEPAUDIO_BASE_URL` 自定义）。
 
 ### 跟随 DFSC 模式（宿主不支持，占位）
 
-BVR 的实现方式：宿主在主进程代发模型请求，不向插件导出 Key；宿主在 `<step-runtime>/bvr/host.json` 写下 `{url: "http://127.0.0.1:<port>/", version: 1, token: "<64 hex>"}`，插件运行体读取后用该 token 走本地桥接。**这是 BVR 专用宿主能力**（DFSC main `12c13170f8f80945cfa245c1297b81d527f3ff23` 起包含"BVR 宿主桥"）。
+BVR 的实现方式：宿主在主进程代发模型请求，不向插件导出 Key；宿主在 `<step-runtime>/bvr/host.json` 写下 `{url: "http://127.0.0.1:<port>/", version: 1, token: "<64 hex>"}`，插件运行体读取后用该 token 走本地桥接。**这是 BVR 专用宿主能力**；上游 #237 正在讨论通用化边界。
 
 对 StepAudio 尚无同类桥接。本插件的处理：
 
