@@ -96,6 +96,14 @@ test('托管布局：包内文件被改动后指纹失配（fail-closed）', asy
   );
 });
 
+test('托管布局：宿主未写入配置绑定时给出升级指引（不回落 env）', async () => {
+  const { pkg } = await createManagedLayout({ values: {}, secrets: {}, withBinding: false });
+  await assert.rejects(
+    () => loadConfig({ STEP_API_KEY: 'env-key' }, { pluginRoot: pkg }),
+    (error) => /未对本插件提供声明式配置支持/.test(error.message),
+  );
+});
+
 test('isManagedInstall：plugins 布局 + desktop-plugins 存在才算托管', async () => {
   const { pkg, root } = await createManagedLayout({ values: {}, secrets: { api_key: 'k' } });
   assert.equal(isManagedInstall(pkg), true);

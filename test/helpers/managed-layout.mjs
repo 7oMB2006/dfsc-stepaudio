@@ -63,6 +63,7 @@ export async function createManagedLayout({
   values = {},
   secrets = {},
   withSnapshot = true,
+  withBinding = true,
   packageFiles = ['package.json', 'step.plugin.json', 'dfsc.settings.json'],
 } = {}) {
   const root = await makeTempDir('dfsc-stepaudio-managed-');
@@ -89,7 +90,9 @@ export async function createManagedLayout({
   const binding = { version: 1, instance: INSTANCE, id: PLUGIN_ID, revision: REVISION, schemaHash, contentHash, fingerprint };
 
   await mkdir(path.join(root, 'desktop-plugins', 'bindings'), { recursive: true });
-  await writeFile(path.join(root, 'desktop-plugins', 'bindings', `${PLUGIN_ID}.json`), JSON.stringify(binding));
+  if (withBinding) {
+    await writeFile(path.join(root, 'desktop-plugins', 'bindings', `${PLUGIN_ID}.json`), JSON.stringify(binding));
+  }
   await writeFile(
     path.join(root, 'desktop-plugins', 'installations.json'),
     JSON.stringify({

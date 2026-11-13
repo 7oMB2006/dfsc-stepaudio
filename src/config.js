@@ -152,11 +152,23 @@ function managedFailure() {
 
 /** 托管布局：只信宿主设置。读取失败一律 fail-closed，不回落 env 或 CLI 配置。 */
 async function loadManagedConfig(pluginRoot) {
-  let reader;
+  const reader = new ConfigurationReader(packageUrlFor(pluginRoot));
+  const bindingPath = path.join(reader.root, 'desktop-plugins', 'bindings', `${reader.folder}.json`);
+  let hasBinding = false;
   try {
-    reader = new ConfigurationReader(packageUrlFor(pluginRoot));
+    await fs.access(bindingPath);
+    hasBinding = true;
   } catch {
-    throw managedFailure();
+    hasBinding = false;
+  }
+  if (!hasBinding) {
+    // 宿主安装了插件但没有为本插件写入配置绑定：说明当前宿主不支持声明式设置
+    // （或插件未通过正常流程安装）。此时不回落 env——托管安装下环境变量一律不参与。
+    throw new McpToolError(
+      '当前 DFSC 宿主未对本插件提供声明式配置支持（未找到配置绑定）。请升级到支持插件中心配置的 DFSC 版本；'
+        + '托管安装下不使用环境变量或外部配置文件。',
+      { code: 'CONFIG_ERROR' },
+    );
   }
   let snapshot;
   try {

@@ -3,6 +3,15 @@
 > 目的：在市场收录前，用真实 DFSC 宿主验证 0.2.0 的安装、配置、合成与 fail-closed 全链。
 > 隔离机制（抄官方 `integration/verify-dfsc.mjs`）：以 `DESKTOP_TEST_USER_DATA=<临时目录>` 启动 DFSC，**不动真实profile**。
 
+## 执行记录（2026-11-14，已通过）
+
+- 宿主：本机构建包（`win-unpacked`，main@2026-11-13 + #215–#238，构建记录见 `docs/host-build.md`）。
+- 驱动：`node scripts/acceptance-host.mjs`（playwright `_electron.launch` + `window.desktop` API 驱动，base_url 指向本地 HTTP fixture，secret 用假 Key）。
+- 结果：**17/17 通过**——启动/加本地市场源/安装/schema 8 字段/consumer.server/secret 必填/初始 unconfigured/保存 revision/宿主写 binding/安装含 dist/**按宿主设置合成成功**/Bearer 正确到达 API/请求体用设置音色模型/输出落设置目录/**改设置后 fail-closed**/卸载消失。
+- 附带修复：验收后区分了“宿主未写配置绑定”（老宿主，提示升级）与“绑定失效”（提示重新保存）两种错误，补 1 个单测（61/61）。
+
+> 残留未验（需真实 Key）：真实阶跃 API 的合成计费。上述链路已证明 Key 与请求体正确到达上游端点（fixture 捕获），真实计费留待用户持 Key 执行一次。
+
 ## 0. 前置条件
 
 | 项 | 要求 |

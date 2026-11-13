@@ -17288,11 +17288,20 @@ function managedFailure() {
   );
 }
 async function loadManagedConfig(pluginRoot) {
-  let reader;
+  const reader = new ConfigurationReader(packageUrlFor(pluginRoot));
+  const bindingPath = path.join(reader.root, "desktop-plugins", "bindings", `${reader.folder}.json`);
+  let hasBinding = false;
   try {
-    reader = new ConfigurationReader(packageUrlFor(pluginRoot));
+    await fs.access(bindingPath);
+    hasBinding = true;
   } catch {
-    throw managedFailure();
+    hasBinding = false;
+  }
+  if (!hasBinding) {
+    throw new McpToolError(
+      "\u5F53\u524D DFSC \u5BBF\u4E3B\u672A\u5BF9\u672C\u63D2\u4EF6\u63D0\u4F9B\u58F0\u660E\u5F0F\u914D\u7F6E\u652F\u6301\uFF08\u672A\u627E\u5230\u914D\u7F6E\u7ED1\u5B9A\uFF09\u3002\u8BF7\u5347\u7EA7\u5230\u652F\u6301\u63D2\u4EF6\u4E2D\u5FC3\u914D\u7F6E\u7684 DFSC \u7248\u672C\uFF1B\u6258\u7BA1\u5B89\u88C5\u4E0B\u4E0D\u4F7F\u7528\u73AF\u5883\u53D8\u91CF\u6216\u5916\u90E8\u914D\u7F6E\u6587\u4EF6\u3002",
+      { code: "CONFIG_ERROR" }
+    );
   }
   let snapshot;
   try {
