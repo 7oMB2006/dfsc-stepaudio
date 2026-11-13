@@ -95,13 +95,9 @@ node scripts/make-icon.mjs   # 重新生成 icon.png
 
 ## 本机试用
 
-日用 DFSC 若为 2026-11-09 之前构建（缺插件中心声明式配置），直接安装会报“宿主不支持”。可跑独立试用实例（需本机已构建宿主包，见 `docs/host-build.md`）：
+需要 2026-11-09 之后构建的 DFSC 宿主（插件中心声明式配置能力）。在 DFSC 中：**插件 → 市场来源 → 添加市场 → 本地目录**，选本仓库根目录；随后在「发现」安装 dfsc-stepaudio，重载会话，插件中心填 API Key 即可使用。
 
-```sh
-node scripts/trial-launch.mjs
-```
-
-首次运行在 `D:\StepFun\dfsc-trial-profile` 创建独立 profile、静默安装插件并启动实例；重跑即直接启动。启动后：登录 Step 账号 → 插件中心填 API Key → 保存 → 重启会话 → 对话里直接使唤。删除该目录即重置。真机验收结果见 `docs/acceptance-runbook.md`（17/17 通过）。
+真机验收（17 项闸门）可用 `node scripts/acceptance-host.mjs` 对本地构建的宿主自动执行，需先用 `docs/host-build.md` 的方法构建宿主并通过 `HOST_DIR` 指定。
 
 目录结构、市场收录流程与宿主兼容边界见 [docs/dfsc-integration.md](docs/dfsc-integration.md)。
 
