@@ -50,14 +50,18 @@ MCP 能力通过 `mcpServers` 段声明（字段取自 BVR 范例）：
 - env 文件位于插件目录内一律拒绝（市场快照会公开它）；文件大小上限 128 KiB。
 - 支持 Step Plan（`https://api.stepfun.com/step_plan/v1`）、开放平台（`/v1`）与任意 OpenAI 兼容网关（`STEPAUDIO_BASE_URL` 自定义）。
 
-### 跟随 DFSC 模式（宿主不支持，占位）
+### 跟随 DFSC 模式（通用宿主契约已立，broker TTS 未通，未接入）
 
-BVR 的实现方式：宿主在主进程代发模型请求，不向插件导出 Key；宿主在 `<step-runtime>/bvr/host.json` 写下 `{url: "http://127.0.0.1:<port>/", version: 1, token: "<64 hex>"}`，插件运行体读取后用该 token 走本地桥接。**这是 BVR 专用宿主能力**；上游 #237 正在讨论通用化边界。
+上游 #217/#220 已合入**通用模型来源组件**：插件声明 `dfsc.host.json`（`capabilities`）后，插件中心出现“跟随 DFSC 会话 / 独立配置”开关；跟随模式由宿主 broker 代发模型请求，用户无需 Key（契约见宿主 `docs/PLUGIN_HOST_CONTRACT.md`，BVR 0.2.0 已迁入）。
 
-对 StepAudio 尚无同类桥接。本插件的处理：
+契约首版能力为 `model.text` / `model.video` / `model.asr` / **`model.tts`**——TTS 的输入（文本/voice/格式）与输出（解码音频）均已定义，**本插件类型本就在设计范围内**。但部署侧现状是“TTS 明确尚不可用”（broker 未接通，离线 mockHost 只验证 wire contract）。
 
-- 私密配置若为 `schemaVersion: 2 + mode: "dfsc"`，服务返回明确错误（需要宿主桥接，指引独立模式），**不发明桥接协议、不回退直连**。
-- 宿主提供通用/StepAudio 桥接后，按同一 host.json 模式实现：读取 `<step-runtime>/stepaudio/host.json`，模型请求走本地桥接，Key 与登录 Cookie 不进入插件进程。
+接入跟随模式需要两件事（均未做）：
+
+1. `dfsc.host.json` 声明 `capabilities: ["model.tts"]`；
+2. server 实现桥接客户端：读宿主 `host.json` → 连 `127.0.0.1` → `/v1/context` + `/v1/invoke`，带 revision 校验、取消语义与旧上下文失效处理。
+
+0.2.0 因此只提供独立配置（dfsc.settings.json）；broker TTS 上线后按上述两项接入，用户即可零 Key 沿用会话账户。私密配置中 `schemaVersion: 2 + mode: "dfsc"` 的旧式声明仍返回明确错误。
 
 ## 3. dfsc.plugin.json（分类契约）
 
