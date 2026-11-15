@@ -37,12 +37,10 @@ async function main() {
   let client = null;
   let configError = null;
   try {
+    // loadConfig 在托管布局下已调用 reader.current() 落定首个 revision（stamp），
+    // 不在此处重复调用——整包指纹是秒级开销，启动路径只应有一次
     config = await loadConfig(process.env);
     client = new StepAudioClient(config);
-    if (config.managed) {
-      // 落定首个 revision（官方 stamp 机制）：进程之后不静默采用新 revision
-      await config.reader.current();
-    }
   } catch (error) {
     configError = error instanceof Error ? error.message : String(error);
     log(`配置未就绪：${configError}`);

@@ -95,9 +95,13 @@ node scripts/make-icon.mjs   # 重新生成 icon.png
 
 ## 本机试用
 
-需要 2026-11-09 之后构建的 DFSC 宿主（插件中心声明式配置能力）。在 DFSC 中：**插件 → 市场来源 → 添加市场 → 本地目录**，选本仓库根目录；随后在「发现」安装 dfsc-stepaudio，重载会话，插件中心填 API Key 即可使用。
+需要 2026-11-09 之后构建的 DFSC 宿主（插件中心声明式配置能力）。
 
-真机验收（17 项闸门）可用 `node scripts/acceptance-host.mjs` 对本地构建的宿主自动执行，需先用 `docs/host-build.md` 的方法构建宿主并通过 `HOST_DIR` 指定。
+**重要**：添加市场源前先执行 `npm run stage` 导出干净发布目录（默认 `../dfsc-stepaudio-package`，仅含 git 跟踪的 51 个文件）。宿主对本地目录市场源可能整目录拷贝，直接指向仓库工作目录会把 `node_modules`/`.git` 一起拷进快照（实测 3725 文件/37MB），导致官方 reader 每次整包指纹从 30ms 恶化到 8 秒级、会话加载变慢。修改代码并提交后需重新 stage。
+
+然后在 DFSC 中：**插件 → 市场来源 → 添加市场 → 本地目录**，选择导出目录；随后在「发现」安装 dfsc-stepaudio，重载会话，插件中心填 API Key 即可使用。
+
+真机验收（17 项闸门）可用 `node scripts/acceptance-host.mjs` 对本地构建的宿主自动执行，需先用 `docs/host-build.md` 的方法构建宿主并通过 `HOST_DIR` 指定。真实 Key 端到端验证：`STEP_API_KEY=<key> node scripts/verify-real-api.mjs`。
 
 目录结构、市场收录流程与宿主兼容边界见 [docs/dfsc-integration.md](docs/dfsc-integration.md)。
 

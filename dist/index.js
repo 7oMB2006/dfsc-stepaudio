@@ -17840,9 +17840,6 @@ async function main() {
   try {
     config2 = await loadConfig(process.env);
     client = new StepAudioClient(config2);
-    if (config2.managed) {
-      await config2.reader.current();
-    }
   } catch (error2) {
     configError = error2 instanceof Error ? error2.message : String(error2);
     log(`\u914D\u7F6E\u672A\u5C31\u7EEA\uFF1A${configError}`);
