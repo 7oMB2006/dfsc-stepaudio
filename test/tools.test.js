@@ -215,7 +215,7 @@ test('list_voices 本地目录兜底从 ctx 传入的插件根读取（打包布
 });
 
 test('clone_voice 参数校验', async () => {
-  const { ctx } = makeCtx();
+  const { ctx, client } = makeCtx();
   await assert.rejects(
     () => cloneVoice.handler({ audio_path: 'a.wav', file_id: 'file-1' }, ctx),
     /只能提供一个/,
@@ -233,4 +233,6 @@ test('clone_voice 参数校验', async () => {
     () => cloneVoice.handler({ file_id: 'file-1', preview: true }, ctx),
     /sample_text/,
   );
+  // Codex 审查回归：preview 参数非法的请求不得先上传/创建（付费）再报错
+  assert.equal(client.calls.length, 0, 'preview 参数非法的请求不得产生上传或创建调用');
 });

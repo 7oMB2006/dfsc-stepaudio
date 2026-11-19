@@ -42,12 +42,23 @@ async function main() {
   // independent = 走插件自己的配置。宿主发布验收等场景不带上下文，
   // 此时降级为纯独立模式，服务照常握手（list_voices/合成均可用）。
   let host = null;
+  let contextError = null;
   try {
     host = createHostClient({ pluginId: PLUGIN_ID, consumer: HOST_CONSUMER });
   } catch (error) {
     const code = error instanceof HostClientError ? error.code : 'UNKNOWN';
-    log(`无可用宿主启动上下文（${code}）：按独立模式运行`);
-    host = null;
+    if (code === 'HOST_UNAVAILABLE') {
+      // 上下文缺失（非宿主启动，或宿主发布验收的最小环境）：按独立模式运行
+      log('未检测到宿主启动上下文：按独立模式运行');
+      host = null;
+    } else {
+      // 上下文存在但无效（过期/损坏/版本不符）：不静默回退独立模式——
+      // 那会换用另一套账户与计费渠道，违反"两分支失败均不静默互切"的承诺
+      log(`宿主启动上下文无效（${code}）：拒绝工具调用，待重启会话`);
+      contextError = `宿主启动上下文无效（${code}）。请重启使用本插件的会话；`
+        + '不要改用独立配置绕过（那会使用另一套账户与计费渠道）。';
+      host = null;
+    }
   }
   const follow = host !== null && host.mode === 'follow';
   process.on('exit', () => { host?.close(); });
@@ -84,6 +95,8 @@ async function main() {
   }));
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    // 宿主启动上下文存在但无效：拒绝一切调用，不回退独立模式（避免更换账户与计费渠道）
+    if (contextError) return errorResult(contextError);
     const name = request.params.name;
     const tool = TOOLS.find((candidate) => candidate.definition.name === name);
     // 跟随模式下 broker 只覆盖合成；其余工具仍需独立配置，由固定提示挡住

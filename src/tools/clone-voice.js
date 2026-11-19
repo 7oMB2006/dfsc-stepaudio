@@ -36,6 +36,16 @@ export async function handler(args, ctx) {
   if (!hasPath && !hasFileId) {
     throw new McpToolError('必须提供 audio_path 或 file_id', { code: 'INVALID_ARGS' });
   }
+  // preview 的前置校验必须在上传与创建之前：createVoice 是付费操作（9.9 元/音色），
+  // 参数非法的请求不应产生已付费的音色资产再报错。
+  const preview = args.preview === true;
+  let sampleText = '';
+  if (preview) {
+    sampleText = String(args.sample_text ?? '').trim();
+    if (sampleText === '') {
+      throw new McpToolError('preview=true 时必须提供 sample_text（试听文本）', { code: 'INVALID_ARGS' });
+    }
+  }
 
   let fileId = args.file_id?.trim();
   let uploaded;
@@ -69,12 +79,8 @@ export async function handler(args, ctx) {
     duplicated: voice.duplicated === true,
   };
 
-  if (args.preview === true) {
-    const sampleText = String(args.sample_text ?? '').trim();
-    if (sampleText === '') {
-      throw new McpToolError('preview=true 时必须提供 sample_text（试听文本）', { code: 'INVALID_ARGS' });
-    }
-    const preview = await client.previewVoice(
+  if (preview) {
+    const previewResult = await client.previewVoice(
       cleanParams({
         model,
         file_id: fileId,
@@ -83,11 +89,11 @@ export async function handler(args, ctx) {
         instruction: args.instruction,
       }),
     );
-    if (typeof preview.sample_audio !== 'string' || preview.sample_audio === '') {
+    if (typeof previewResult.sample_audio !== 'string' || previewResult.sample_audio === '') {
       throw new McpToolError('试听失败：上游未返回音频数据', { code: 'UPSTREAM_BAD_RESPONSE' });
     }
     const previewPath = resolveOutputPath(config.outputDir, undefined, 'wav');
-    await writeBuffer(previewPath, Buffer.from(preview.sample_audio, 'base64'));
+    await writeBuffer(previewPath, Buffer.from(previewResult.sample_audio, 'base64'));
     payload.preview_file = previewPath;
   }
 

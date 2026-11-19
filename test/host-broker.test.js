@@ -275,6 +275,32 @@ test('follow 模式过期租约：STALE_CONTEXT 明确报错且零 broker 请求
   }
 });
 
+test('启动上下文存在但无效：拒绝调用且不静默回退独立模式', async () => {
+  // Codex 审查回归：宿主注入了上下文但它损坏/过期时，不得改用独立配置的账户与计费渠道
+  const server = await runServer({ DFSC_LAUNCH_CONTEXT: '{"version":"dfsc-launch-v1","mode":"fol' }, [
+    INITIALIZE,
+    { jsonrpc: '2.0', method: 'notifications/initialized' },
+    { jsonrpc: '2.0', id: 2, method: 'tools/list' },
+    { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'text_to_speech', arguments: { text: 'x', voice: 'v' } } },
+    { jsonrpc: '2.0', id: 4, method: 'tools/call', params: { name: 'list_voices', arguments: { scope: 'official' } } },
+  ]);
+  try {
+    const init = await server.waitFor(1);
+    assert.equal(init.result.serverInfo.name, 'dfsc-stepaudio');
+    const list = await server.waitFor(2);
+    assert.deepEqual(list.result.tools.map((tool) => tool.name).sort(), ['clone_voice', 'list_voices', 'text_to_speech']);
+    for (const id of [3, 4]) {
+      const call = await server.waitFor(id);
+      assert.equal(call.result.isError, true);
+      assert.match(call.result.content[0].text, /宿主启动上下文无效/);
+      assert.doesNotMatch(call.result.content[0].text, /配置错误|API Key/);
+    }
+    assert.match(server.getStderr(), /宿主启动上下文无效/);
+  } finally {
+    await server.close();
+  }
+});
+
 test('无启动上下文时按独立模式运行（宿主发布验收路径）', async () => {
   const server = await runServer({}, [
     INITIALIZE,
@@ -291,7 +317,7 @@ test('无启动上下文时按独立模式运行（宿主发布验收路径）',
     // 无配置时报配置错误（独立模式语义不变），而不是跟随模式提示
     assert.equal(call.result.isError, true);
     assert.match(call.result.content[0].text, /配置/);
-    assert.match(server.getStderr(), /无可用宿主启动上下文/);
+    assert.match(server.getStderr(), /未检测到宿主启动上下文/);
   } finally {
     await server.close();
   }
