@@ -25,7 +25,7 @@
   "id": "dfsc-stepaudio",
   "description": "阶跃 StepAudio TTS 的 MCP 服务：文本转语音、音色列表、音色复刻；DFSC 插件中心内配置，零运行时依赖（自包含 dist）。",
   "source": {
-    "repository": "<用户GitHub账号>/dfsc-stepaudio",
+    "repository": "7oMB2006/dfsc-stepaudio",
     "commit": "1061c77ae4c12b3d9c6b4bd3fd4999e5429a6427",
     "path": "."
   },
