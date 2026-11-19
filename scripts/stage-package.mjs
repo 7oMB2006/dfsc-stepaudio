@@ -23,20 +23,27 @@ const target = path.resolve(process.argv[2] ?? path.join(root, '..', 'dfsc-stepa
 const files = execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8' })
   .split('\n')
   .map((line) => line.trim())
-  .filter(Boolean);
+  .filter(Boolean)
+  // test/ 只在开发期使用：其中的 host-client/testing.mjs 是离线测试助手，
+  // 上游 PLUGIN_TTS_ADAPTER.md 明确要求不得打入发布物。
+  .filter((file) => file !== 'test' && !file.startsWith('test/'));
 
 if (files.length === 0) {
   console.error('git ls-files 为空：仓库是否有未提交的变更？');
   process.exit(1);
 }
 
-// 全量重建，保证导出内容与当前 git 跟踪状态一致（无残留）
-await fs.rm(target, { recursive: true, force: true });
+// 先在暂存目录构建，再原子替换：宿主的 marketplace-update 会在后台整目录拷贝，
+// 旧的 rm+逐个拷贝会让它撞上半成品目录（实测连续 marketplace-failed）。
+const staging = `${target}.staging`;
+await fs.rm(staging, { recursive: true, force: true });
 for (const file of files) {
-  const dest = path.join(target, file);
+  const dest = path.join(staging, file);
   await fs.mkdir(path.dirname(dest), { recursive: true });
   await fs.copyFile(path.join(root, file), dest);
 }
+await fs.rm(target, { recursive: true, force: true });
+await fs.rename(staging, target);
 
 console.log(`已导出 ${files.length} 个受跟踪文件 → ${target}`);
 console.log('在 DFSC「市场来源 → 添加市场 → 本地目录」中请选择该目录。');

@@ -50,18 +50,52 @@ MCP 能力通过 `mcpServers` 段声明（字段取自 BVR 范例）：
 - env 文件位于插件目录内一律拒绝（市场快照会公开它）；文件大小上限 128 KiB。
 - 支持 Step Plan（`https://api.stepfun.com/step_plan/v1`）、开放平台（`/v1`）与任意 OpenAI 兼容网关（`STEPAUDIO_BASE_URL` 自定义）。
 
-### 跟随 DFSC 模式（通用宿主契约已立，broker TTS 未通，未接入）
+### 跟随 DFSC 模式（broker TTS，2026-11-15 起已接入）
 
-上游 #217/#220 已合入**通用模型来源组件**：插件声明 `dfsc.host.json`（`capabilities`）后，插件中心出现“跟随 DFSC 会话 / 独立配置”开关；跟随模式由宿主 broker 代发模型请求，用户无需 Key（契约见宿主 `docs/PLUGIN_HOST_CONTRACT.md`，BVR 0.2.0 已迁入）。
+上游 #247（merge commit `036ae94`，宿主 r8+）合入了受限官方账户 TTS broker 的生产适配，本插件已接入（`src/lib/host-client/` + `dfsc.host.json`）。**r7 及更旧宿主不含此适配**；是否可用必须查 `context()`，不能只看声明或版本号。
 
-契约首版能力为 `model.text` / `model.video` / `model.asr` / **`model.tts`**——TTS 的输入（文本/voice/格式）与输出（解码音频）均已定义，**本插件类型本就在设计范围内**。但部署侧现状是“TTS 明确尚不可用”（broker 未接通，离线 mockHost 只验证 wire contract）。
+**声明**：包内 `dfsc.host.json`——
 
-接入跟随模式需要两件事（均未做）：
+```json
+{
+  "schemaVersion": 1,
+  "hostApiVersion": 1,
+  "consumer": { "kind": "mcp-stdio", "server": "stepaudio" },
+  "capabilities": ["model.tts"]
+}
+```
 
-1. `dfsc.host.json` 声明 `capabilities: ["model.tts"]`；
-2. server 实现桥接客户端：读宿主 `host.json` → 连 `127.0.0.1` → `/v1/context` + `/v1/invoke`，带 revision 校验、取消语义与旧上下文失效处理。
+`consumer.server` 与 `step.plugin.json` 的 `mcpServers.stepaudio` 一致；宿主用官方 `parseHostDeclaration` 校验（我们的清单无 url/transport/oauth/headers 等禁项，`STEPFUN_API_KEY` 哨兵不匹配 `DFSC_(HOST|LAUNCH)_` 命名空间）。
 
-0.2.0 因此只提供独立配置（dfsc.settings.json）；broker TTS 上线后按上述两项接入，用户即可零 Key 沿用会话账户。私密配置中 `schemaVersion: 2 + mode: "dfsc"` 的旧式声明仍返回明确错误。
+**启动**：server 入口创建一次 `createHostClient({pluginId, consumer})`，消费宿主注入的 `DFSC_LAUNCH_CONTEXT`（不复制、不打印、不转交；退出时 `host.close()`）。无启动上下文（如宿主发布验收的最小环境）时抛 `HOST_UNAVAILABLE`，服务降级为独立模式照常握手。
+
+**模式分支**（两分支失败均不静默互切）：
+
+| 模式 | 合成 | 列音色 / 复刻 |
+| --- | --- | --- |
+| `follow`（宿主 broker） | 走 broker，零 Key，首次合成等宿主授权 | 不可用（broker 无音色管理入口，返回需独立模式的提示） |
+| `independent` | 现有 API Key 链路（托管设置 / env / CLI 私密配置），继续核对 `configurationRevision` fail-closed | 可用 |
+
+**broker 调用序列**（每次 `tools/call`：`context()` 不产生模型请求，`invoke()` 首次触发宿主授权）：
+
+```js
+const context = await host.context();
+const tts = context.capabilities.find(item => item.id === 'model.tts');
+if (!tts?.available) throw new HostClientError(tts?.reason ?? 'CAPABILITY_UNAVAILABLE');
+const result = await host.invoke({
+  requestId: newRequestId(), revision: context.revision, capability: 'model.tts',
+  input: { text, voice, format },
+});
+// result = { type: 'audio', mimeType, data(base64) }，插件自行解码落盘
+```
+
+**硬限制**：单次文本 ≤1000 Unicode 字符；`format` 仅 `mp3`/`wav`/`pcm`（对应 `audio/mpeg`、`audio/wav`、`audio/pcm`）；音频解码后 ≤16 MiB；`voice` 为专用模型支持的音色 ID 直接透传（克隆音色可用，宿主不预验证列表）；**不接受** `model`/`url`/Key/自选 headers/`outputPath`/`return_url`/上传或复刻参数，额外字段会被拒——因此跟随模式下这些入参被忽略并在结果中以 `follow_ignored` 声明。
+
+**模型可用性按账户渠道**（2026-11-17 实测，1 字符合成）：Step Plan 路由仅 `stepaudio-2.5-tts` 可合成；`stepaudio-3-tts` / `step-tts-2` / `step-tts-mini` 返回 404（无权限）。开放平台路由（`/v1`）四模型均可用。宿主下拉列四个模型是 broker 支持清单、不等于账户权益；跟随模式选不支持的模型会在合成时明确失败（`PROVIDER_FAILED`），不静默降级——想用 3 系列需切独立配置 + 开放平台路由（按量计费）。
+
+**授权与失效语义**：首次合成等待宿主逐能力确认；拒绝（`DENIED`）不反复弹窗；租约过期（`STALE_CONTEXT`）要求用户重启相关会话，不自动续约或重发；取消不保证已接受的提供商请求免费。播放、文件命名、落盘位置（`host.dataDirectory`，可用 `output_path` 覆盖）由插件负责；不把 base64 当 URL、文本或已存路径。
+
+**验收**：`test/host-broker.test.js` 6 个离线用例（mock broker，假账户、合成字节）；宿主官方 `verify-stepaudio-release.mjs` 10/10 通过（见 `docs/acceptance-runbook.md`）。
 
 ## 3. dfsc.plugin.json（分类契约）
 

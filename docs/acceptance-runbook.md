@@ -12,6 +12,21 @@
 
 > 残留未验（需真实 Key）：真实阶跃 API 的合成计费。上述链路已证明 Key 与请求体正确到达上游端点（fixture 捕获），真实计费留待用户持 Key 执行一次。
 
+## 执行记录（2026-11-15，#247 broker 接入，已通过）
+
+- 宿主：`main-20261115-036ae94`（`desktopBase` 即上游 #247 的 merge commit，r8+；runtime node v24.16.0）。
+- **宿主官方发布验收**：`node Desktop/scripts/verify-stepaudio-release.mjs --source D:/StepFun/dfsc-StepAudio --runtime <win-unpacked>/resources/runtime --output <新目录>`（脚本本体取自我方 `efd3f4f`，按上游相对 import 闭包含 11 个 electron/scripts 模块，无仓库克隆）。**10/10 通过**：
+  - 只读审计：开发目录按预期失败（`release-vcs`=.git、`release-runtime-dependency`=node_modules）
+  - 白名单 staging：27 文件 / 778KB，audit ok
+  - 原生市场安装 + 安装回执（`provenance: recorded`）+ MCP 服务 `dfsc-stepaudio__stepaudio` 可见
+  - 官方 SDK stdio 握手、工具恰为 `clone_voice/list_voices/text_to_speech`
+  - `list_voices(official)` 走本地目录（39 个内置音色）；空文本合成仅 1 次 fixture 请求（`/v1/audio/system_voices`），零第二次 API 请求、零外部模型请求
+  - 原生卸载后目录消失
+- **follow 模式（broker）**：`test/host-broker.test.js` 6 个离线用例全绿（mock broker：合成落盘宿主数据目录、参数拦截、DENIED、能力不可用、过期租约 STALE_CONTEXT 零请求、无上下文独立回归 + token 不泄漏）。全量 67/67。
+- 附带修正：`npm test` 增加 `--test-concurrency=1`（broker 测试进程重，并行会互相拖超时）；发布 staging 排除 `test/`（离线 `testing.mjs` 不得进发布物）。
+
+> 残留未验（需真实账户 GUI 回路）：宿主跟随模式在真实 Electron 宿主 + 真实 Step 账户下的端到端合成（首次授权弹窗、账户路由、真实计费）。上游同类验收使用假账户与合成音频字节；我方真实账户验证留待用户持账户驱动一次宿主实例。
+
 ## 0. 前置条件
 
 | 项 | 要求 |

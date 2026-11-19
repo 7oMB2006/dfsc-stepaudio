@@ -56,6 +56,17 @@ node scripts\configure.mjs --profile <私密目录> --check
 
 被 DFSC 安装后（位于 `<step-runtime>/plugins/dfsc-stepaudio`）：**只读宿主设置**，环境变量与 CLI 私密配置一律不参与；设置在插件中心被变更或撤销后，运行中的进程对后续调用返回“请重启服务”，不会静默使用旧配置或回退到其他来源。
 
+### 跟随宿主模式（零 Key 合成）
+
+宿主 r8+（上游 #247，merge commit `036ae94`）提供受限官方账户 TTS broker。宿主注入启动上下文后，插件按上下文分两种模式，**失败不静默互切**：
+
+| 模式 | 合成 | 列音色 / 复刻 |
+| --- | --- | --- |
+| 跟随宿主（broker） | `text_to_speech` 走 broker，用当前会话的官方 Step 账户，**无需 Key**；首次合成等待宿主授权 | 不可用（broker 无音色管理入口） |
+| 独立配置 | 用上面设置页/环境变量的 API Key | 可用 |
+
+跟随模式只支持 `text` / `voice` / `response_format`（mp3/wav/pcm）三个入参，单次 ≤1000 字符，音频写入宿主数据目录；`model`/`instruction`/`speed` 等入参被忽略并在结果中声明。老宿主（无 broker）自动按独立模式运行，行为与 0.2.0 一致。细节见 [docs/dfsc-integration.md](docs/dfsc-integration.md)。
+
 ## 工具参数要点
 
 ### text_to_speech
@@ -97,7 +108,7 @@ node scripts/make-icon.mjs   # 重新生成 icon.png
 
 需要 2026-11-09 之后构建的 DFSC 宿主（插件中心声明式配置能力）。
 
-**重要**：添加市场源前先执行 `npm run stage` 导出干净发布目录（默认 `../dfsc-stepaudio-package`，仅含 git 跟踪的 51 个文件）。宿主对本地目录市场源可能整目录拷贝，直接指向仓库工作目录会把 `node_modules`/`.git` 一起拷进快照（实测 3725 文件/37MB），导致官方 reader 每次整包指纹从 30ms 恶化到 8 秒级、会话加载变慢。修改代码并提交后需重新 stage。
+**重要**：添加市场源前先执行 `npm run stage` 导出干净发布目录（默认 `../dfsc-stepaudio-package`，仅含 git 跟踪的 52 个文件，不含 `test/`）。宿主对本地目录市场源可能整目录拷贝，直接指向仓库工作目录会把 `node_modules`/`.git` 一起拷进快照（实测 3725 文件/37MB），导致官方 reader 每次整包指纹从 30ms 恶化到 8 秒级、会话加载变慢。修改代码并提交后需重新 stage。
 
 然后在 DFSC 中：**插件 → 市场来源 → 添加市场 → 本地目录**，选择导出目录；随后在「发现」安装 dfsc-stepaudio，重载会话，插件中心填 API Key 即可使用。
 
@@ -107,7 +118,7 @@ node scripts/make-icon.mjs   # 重新生成 icon.png
 
 ## 路线图
 
-- 跟随 DFSC 模式：待宿主提供 StepAudio 桥接后实现（协议对齐 BVR 的 host.json 模式）
+- ~~跟随 DFSC 模式：待宿主提供 StepAudio 桥接后实现~~ → **已实现**（0.3.0，见「跟随宿主模式」一节）
 - 流式合成（WebSocket `/realtime/audio` 或 SSE）
 - `voice_label`（情绪/风格/语言标签，step-tts 系列）
 - 配套技能（音色选择与 instruction 写法指引）

@@ -4,8 +4,8 @@
 
 ## 一、提交前核对清单
 
-- [ ] **真机安装验收（硬门）**：一次性 DFSC 数据目录安装本插件，验证：市场发现/安装 → 插件中心设置页渲染 8 字段 → 填 Key 保存 → 重启会话 → `text_to_speech` 真实合成 → 改设置后下次调用 fail-closed → 停用/重启/卸载。通过后才继续。
-- [ ] **`requirements.dfsc` 声明**：验收通过后，在 `dfsc.plugin.json` 补 `requirements.dfsc`（填写自己验证过的范围，如 `>=0.6.0 <1.0.0`），同步 `test/manifest.test.js` 已有校验。
+- [x] **真机安装验收（硬门）**：已通过两轮——(1) 2026-11-14 真机 17/17（本地构建宿主，playwright 驱动，`docs/acceptance-runbook.md`）；(2) 2026-11-15 宿主官方 `verify-stepaudio-release.mjs` 10/10（宿主 `main-20261115-036ae94`，即上游 #247）。残留仅“真实账户 GUI 回路下的跟随模式合成计费”，留待用户持账户驱动。
+- [ ] **`requirements.dfsc` 声明**：等含 #247（broker）的公开宿主版本发布后补（`>=该版本 <1.0.0`），同步 `test/manifest.test.js` 已有校验。
 - [ ] **推送独立仓库**：用户提供 GitHub 账号后执行 `git push`，确认远端默认分支为 `main`。
 - [ ] **刷新 SHA**：registry 条目必须使用最终提交的完整 40 位 SHA（见下方草稿，执行时替换）。
 - [ ] **内部文档去留决策**：`docs/marketplace-research.md`（上游机制研究）与 `docs/webui-design.md`（WebUI 设计）是开发期文档，会随资源目录进入市场快照。若不想公开，在提交前移到仓库外或删节；`UPSTREAM.md`（vendor 来源）建议保留——评审时需要溯源。

@@ -1,7 +1,17 @@
 # 宿主验收包构建记录（2026-11-14）
 
-> 用途：为 dfsc-StepAudio 0.2.0 真机安装验收提供本地构建的 DFSC 宿主。
+> 用途：为 dfsc-StepAudio 真机安装验收提供本地构建的 DFSC 宿主。
 > 位置：`D:\StepFun\dfsc-host-build\`（2.4GB，与插件仓库隔离，不进入插件发布物）。
+
+## r8 构建（2026-11-15，用户构建）
+
+| 项 | 值 |
+| --- | --- |
+| 目录 | `D:\DFSC Builds\main-20261115-036ae94\` |
+| desktopBase | `036ae94e50b60251a540564a5ce3ae4991328e00`（上游 #247 merge commit，TTS broker 生产适配自此可用） |
+| runtime | node v24.16.0（sha256 `b3094d0b…`），entry `step/dist/bundle/step.js` |
+| 用途 | 宿主官方 `verify-stepaudio-release.mjs` 验收（10/10 通过）；runtime 目录 `<包>/win-unpacked/resources/runtime` 含 `step/dist/bundle/index.js` 与 `node/node.exe` |
+| 备注 | r7 及更旧包**不含** TTS broker 适配；跟随模式必须查 `context()` 判断，不能看版本号 |
 
 ## 产物
 
