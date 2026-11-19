@@ -18197,6 +18197,14 @@ async function handler3(args, ctx) {
   if (!hasPath && !hasFileId) {
     throw new McpToolError("\u5FC5\u987B\u63D0\u4F9B audio_path \u6216 file_id", { code: "INVALID_ARGS" });
   }
+  const preview = args.preview === true;
+  let sampleText = "";
+  if (preview) {
+    sampleText = String(args.sample_text ?? "").trim();
+    if (sampleText === "") {
+      throw new McpToolError("preview=true \u65F6\u5FC5\u987B\u63D0\u4F9B sample_text\uFF08\u8BD5\u542C\u6587\u672C\uFF09", { code: "INVALID_ARGS" });
+    }
+  }
   let fileId = args.file_id?.trim();
   let uploaded;
   if (hasPath) {
@@ -18226,12 +18234,8 @@ async function handler3(args, ctx) {
     model,
     duplicated: voice.duplicated === true
   };
-  if (args.preview === true) {
-    const sampleText = String(args.sample_text ?? "").trim();
-    if (sampleText === "") {
-      throw new McpToolError("preview=true \u65F6\u5FC5\u987B\u63D0\u4F9B sample_text\uFF08\u8BD5\u542C\u6587\u672C\uFF09", { code: "INVALID_ARGS" });
-    }
-    const preview = await client.previewVoice(
+  if (preview) {
+    const previewResult = await client.previewVoice(
       cleanParams({
         model,
         file_id: fileId,
@@ -18240,11 +18244,11 @@ async function handler3(args, ctx) {
         instruction: args.instruction
       })
     );
-    if (typeof preview.sample_audio !== "string" || preview.sample_audio === "") {
+    if (typeof previewResult.sample_audio !== "string" || previewResult.sample_audio === "") {
       throw new McpToolError("\u8BD5\u542C\u5931\u8D25\uFF1A\u4E0A\u6E38\u672A\u8FD4\u56DE\u97F3\u9891\u6570\u636E", { code: "UPSTREAM_BAD_RESPONSE" });
     }
     const previewPath = resolveOutputPath(config2.outputDir, void 0, "wav");
-    await writeBuffer(previewPath, Buffer.from(preview.sample_audio, "base64"));
+    await writeBuffer(previewPath, Buffer.from(previewResult.sample_audio, "base64"));
     payload.preview_file = previewPath;
   }
   return textResult(payload);
@@ -18265,12 +18269,19 @@ function errorResult(message) {
 }
 async function main() {
   let host = null;
+  let contextError = null;
   try {
     host = createHostClient({ pluginId: PLUGIN_ID, consumer: HOST_CONSUMER });
   } catch (error2) {
     const code = error2 instanceof HostClientError ? error2.code : "UNKNOWN";
-    log(`\u65E0\u53EF\u7528\u5BBF\u4E3B\u542F\u52A8\u4E0A\u4E0B\u6587\uFF08${code}\uFF09\uFF1A\u6309\u72EC\u7ACB\u6A21\u5F0F\u8FD0\u884C`);
-    host = null;
+    if (code === "HOST_UNAVAILABLE") {
+      log("\u672A\u68C0\u6D4B\u5230\u5BBF\u4E3B\u542F\u52A8\u4E0A\u4E0B\u6587\uFF1A\u6309\u72EC\u7ACB\u6A21\u5F0F\u8FD0\u884C");
+      host = null;
+    } else {
+      log(`\u5BBF\u4E3B\u542F\u52A8\u4E0A\u4E0B\u6587\u65E0\u6548\uFF08${code}\uFF09\uFF1A\u62D2\u7EDD\u5DE5\u5177\u8C03\u7528\uFF0C\u5F85\u91CD\u542F\u4F1A\u8BDD`);
+      contextError = `\u5BBF\u4E3B\u542F\u52A8\u4E0A\u4E0B\u6587\u65E0\u6548\uFF08${code}\uFF09\u3002\u8BF7\u91CD\u542F\u4F7F\u7528\u672C\u63D2\u4EF6\u7684\u4F1A\u8BDD\uFF1B\u4E0D\u8981\u6539\u7528\u72EC\u7ACB\u914D\u7F6E\u7ED5\u8FC7\uFF08\u90A3\u4F1A\u4F7F\u7528\u53E6\u4E00\u5957\u8D26\u6237\u4E0E\u8BA1\u8D39\u6E20\u9053\uFF09\u3002`;
+      host = null;
+    }
   }
   const follow = host !== null && host.mode === "follow";
   process.on("exit", () => {
@@ -18300,6 +18311,7 @@ async function main() {
     }))
   }));
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    if (contextError) return errorResult(contextError);
     const name = request.params.name;
     const tool = TOOLS.find((candidate) => candidate.definition.name === name);
     const followAllowed = follow && tool?.definition.name === definition.name;

@@ -10,6 +10,9 @@
 - 发布卫生：通过宿主官方 `verify-stepaudio-release.mjs` 验收 10/10（原生安装、托管 fixture、官方 SDK stdio 握手、工具清单、本地音色目录、空文本零二次请求、原生卸载），宿主 `main-20261115-036ae94`，详见 `docs/acceptance-runbook.md`。
 - **移除 `desktop` 工作区声明**（试用反馈：顶栏入口是噪点）：不再有“语音工坊”主视图入口与三个文档页；`docs/start.md`、`docs/voices.md`、`docs/recipes.md` 仍随包发布并经 README 可达。三个 MCP 工具与跟随模式不受影响。0.4.0 WebUI 落地时恢复声明。
 - **声明 `requirements.dfsc: "0.6.0"`** 并按社区市场规范充实外部准备项披露（Node.js 运行时；模型访问与额度——独立 Key / 跟随账户、TTS broker 构建要求、计费说明）。真实宿主验收已全过（17/17 + 官方发布验收 10/10 + follow 真机 e2e）。
+- **市场评审修复（Codex review）**：
+  - `clone_voice` 的 preview 前置校验移至上传与创建之前——`preview=true` 缺 `sample_text` 不再先创建付费音色资产（9.9 元/音色）再报错；新增回归断言（零上游调用）。
+  - 启动上下文**存在但无效**时拒绝一切工具调用，不再静默回退独立配置（那会更换账户与计费渠道）；仅上下文**缺失**（非宿主启动/宿主发布验收最小环境）时按独立模式运行。新增回归用例。
 
 ## 0.2.0
 
