@@ -113,7 +113,7 @@ test('dfsc.plugin.json requirements 契约（宿主 schema：作者声明的准�
 
   const { requirements } = declaration;
   assert.ok(requirements, '声明 requirements');
-  // requirements.dfsc 需是 semver 范围；未通过真实宿主验收前不声明
+  // requirements.dfsc 需是 semver 范围；已通过真实宿主验收（17/17 + 官方发布验收 10/10 + follow 真机 e2e）后声明
   if (requirements.dfsc !== undefined) {
     assert.match(requirements.dfsc, /^\d+\.\d+\.\d+(?:[-+].*)?(?:\s+(?:>=|<=|>|<|=|\^|~)\s*\d+\.\d+\.\d+(?:[-+].*)?)*$/, 'dfsc 为语义化版本范围');
   }

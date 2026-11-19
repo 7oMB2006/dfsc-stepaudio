@@ -6,6 +6,7 @@
   "license": "MIT",
   "documentation": { "readme": "README.md", "changelog": "CHANGELOG.md" },
   "requirements": {
+    "dfsc": "0.6.0",
     "external": [
       {
         "name": "Node.js",
@@ -14,8 +15,8 @@
         "optional": false
       },
       {
-        "name": "Step Plan 订阅或阶跃开放平台 API Key",
-        "description": "调用 StepAudio TTS 的凭据。安装后按 README 配置；市场收录不等于账户或付费授权。",
+        "name": "模型访问与额度",
+        "description": "独立模式自备 Step Plan 订阅或阶跃开放平台 API Key（插件中心配置页填写）；跟随模式使用 DFSC 登录的 Step 账户、零 Key，但需含 TTS broker 的宿主构建（上游 #247 合入之后）。语音合成消耗套餐额度或按量计费；市场收录不等于账户或付费授权。",
         "url": "https://platform.stepfun.com/",
         "optional": false
       }

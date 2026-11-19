@@ -9,6 +9,7 @@
 - 测试：新增 `test/host-broker.test.js` 6 个 broker 离线用例（mock broker：合成落盘、参数拦截、DENIED、能力不可用、过期租约、无上下文独立回归、token 不泄漏）；全量 67/67。
 - 发布卫生：通过宿主官方 `verify-stepaudio-release.mjs` 验收 10/10（原生安装、托管 fixture、官方 SDK stdio 握手、工具清单、本地音色目录、空文本零二次请求、原生卸载），宿主 `main-20261115-036ae94`，详见 `docs/acceptance-runbook.md`。
 - **移除 `desktop` 工作区声明**（试用反馈：顶栏入口是噪点）：不再有“语音工坊”主视图入口与三个文档页；`docs/start.md`、`docs/voices.md`、`docs/recipes.md` 仍随包发布并经 README 可达。三个 MCP 工具与跟随模式不受影响。0.4.0 WebUI 落地时恢复声明。
+- **声明 `requirements.dfsc: "0.6.0"`** 并按社区市场规范充实外部准备项披露（Node.js 运行时；模型访问与额度——独立 Key / 跟随账户、TTS broker 构建要求、计费说明）。真实宿主验收已全过（17/17 + 官方发布验收 10/10 + follow 真机 e2e）。
 
 ## 0.2.0
 
