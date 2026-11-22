@@ -3262,8 +3262,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path6) {
-      let input = path6;
+    function removeDotSegments(path7) {
+      let input = path7;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3337,11 +3337,11 @@ var require_utils = __commonJS({
       }
       return output.join("");
     }
-    function removeDotSegmentsRelative(path6) {
-      if (path6 === "" || path6[0] === "/") {
-        return removeDotSegments(path6);
+    function removeDotSegmentsRelative(path7) {
+      if (path7 === "" || path7[0] === "/") {
+        return removeDotSegments(path7);
       }
-      const segments = path6.split("/");
+      const segments = path7.split("/");
       const last = segments.length - 1;
       const output = [];
       let trailingDirectory = false;
@@ -3704,8 +3704,8 @@ var require_schemes = __commonJS({
       }
       if (wsComponent.resourceName) {
         const queryIndex = wsComponent.resourceName.indexOf("?");
-        const path6 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
-        wsComponent.path = path6 && path6 !== "/" ? path6 : void 0;
+        const path7 = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
+        wsComponent.path = path7 && path7 !== "/" ? path7 : void 0;
         wsComponent.query = queryIndex === -1 ? void 0 : wsComponent.resourceName.slice(queryIndex + 1);
         wsComponent.resourceName = void 0;
       }
@@ -7492,10 +7492,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path6) {
-  if (!path6)
+function getElementAtPath(obj, path7) {
+  if (!path7)
     return obj;
-  return path6.reduce((acc, key) => acc?.[key], obj);
+  return path7.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys2 = Object.keys(promisesObj);
@@ -7835,11 +7835,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path6, issues) {
+function prefixIssues(path7, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path6);
+    iss.path.unshift(path7);
     return iss;
   });
 }
@@ -8297,16 +8297,16 @@ function flattenError(error2, mapper = (issue2) => issue2.message) {
 }
 function formatError(error2, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error3, path6 = []) => {
+  const processError = (error3, path7 = []) => {
     for (const issue2 of error3.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path6, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path7, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
       } else {
-        const fullpath = [...path6, ...issue2.path];
+        const fullpath = [...path7, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -17039,6 +17039,10 @@ var StdioServerTransport = class {
   }
 };
 
+// src/index.js
+import path6 from "node:path";
+import { fileURLToPath as fileURLToPath3 } from "node:url";
+
 // src/config.js
 import path from "node:path";
 import os from "node:os";
@@ -17101,12 +17105,12 @@ var fail = () => {
   throw new Error("Plugin configuration unavailable or changed; save and restart the service.");
 };
 var hash = (value) => createHash("sha256").update(value).digest("hex");
-async function read(root, path6, limit = 256 * 1024) {
-  if (!path6 || /[:\\\0]/u.test(path6) || path6.split("/").some((part) => !part || part === ".." || part === ".")) fail();
+async function read(root, path7, limit = 256 * 1024) {
+  if (!path7 || /[:\\\0]/u.test(path7) || path7.split("/").some((part) => !part || part === ".." || part === ".")) fail();
   let target = resolve(root);
   const canonicalRoot = await realpath(target);
   if (canonicalRoot !== target || (await lstat(target)).isSymbolicLink()) fail();
-  for (const part of path6.split("/")) {
+  for (const part of path7.split("/")) {
     target = join(target, part);
     if ((await lstat(target)).isSymbolicLink()) fail();
   }
@@ -17123,7 +17127,7 @@ async function read(root, path6, limit = 256 * 1024) {
     if (bytesRead !== before.size || before.ino !== after.ino || before.dev !== after.dev || before.mtimeMs !== after.mtimeMs || before.size !== held.size || before.mtimeMs !== held.mtimeMs || await realpath(target) !== canonicalTarget || await realpath(root) !== canonicalRoot) fail();
     let cursor = resolve(root);
     if ((await lstat(cursor)).isSymbolicLink()) fail();
-    for (const part of path6.split("/")) {
+    for (const part of path7.split("/")) {
       cursor = join(cursor, part);
       if ((await lstat(cursor)).isSymbolicLink()) fail();
     }
@@ -17135,11 +17139,11 @@ async function read(root, path6, limit = 256 * 1024) {
 async function fingerprint(root) {
   const digest = createHash("sha256");
   let count = 0, size = 0;
-  async function visit(path6 = "") {
-    if ((await lstat(path6 ? join(root, path6) : root)).isSymbolicLink()) fail();
-    for (const item of (await readdir(join(root, path6), { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name))) {
+  async function visit(path7 = "") {
+    if ((await lstat(path7 ? join(root, path7) : root)).isSymbolicLink()) fail();
+    for (const item of (await readdir(join(root, path7), { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name))) {
       if (++count > 1e4 || item.isSymbolicLink()) fail();
-      const child = path6 ? `${path6}/${item.name}` : item.name;
+      const child = path7 ? `${path7}/${item.name}` : item.name;
       if (item.isDirectory()) await visit(child);
       else {
         const bytes = await read(root, child, 128 * 1024 * 1024);
@@ -17557,6 +17561,19 @@ function defaultFileName(format) {
 }
 function resolveOutputPath(outputDir, outputPath, format) {
   const target = outputPath ? path3.resolve(outputPath) : path3.join(path3.resolve(outputDir), defaultFileName(format));
+  return target;
+}
+function assertOutputOutsidePackage(filePath, pluginRoot, managed) {
+  if (!managed) return filePath;
+  const root = path3.resolve(pluginRoot);
+  const target = path3.resolve(filePath);
+  const relative = path3.relative(root, target);
+  if (relative === "" || !relative.startsWith("..") && !path3.isAbsolute(relative)) {
+    throw new McpToolError(
+      `\u8F93\u51FA\u8DEF\u5F84\u4E0D\u80FD\u4F4D\u4E8E\u63D2\u4EF6\u5305\u5185\uFF08\u4F1A\u7834\u574F\u5B89\u88C5\u5B8C\u6574\u6027\u6821\u9A8C\uFF09\uFF1A${target}`,
+      { code: "INVALID_ARGS" }
+    );
+  }
   return target;
 }
 async function ensureDirFor(filePath) {
@@ -17980,6 +17997,11 @@ async function synthesizeViaHost(args, ctx) {
   if (!tts?.available) {
     throw hostError(new HostClientError(tts?.reason ?? "CAPABILITY_UNAVAILABLE"));
   }
+  const filePath = assertOutputOutsidePackage(
+    resolveOutputPath(host.dataDirectory, args.output_path, format),
+    ctx.pluginRoot,
+    true
+  );
   let result;
   try {
     result = await host.invoke({
@@ -17992,7 +18014,6 @@ async function synthesizeViaHost(args, ctx) {
     throw hostError(error2);
   }
   const buffer = Buffer.from(result.data, "base64");
-  const filePath = resolveOutputPath(host.dataDirectory, args.output_path, format);
   await writeBuffer(filePath, buffer);
   const { size } = await stat(filePath);
   return textResult({
@@ -18064,6 +18085,11 @@ async function handler(args, ctx) {
     sample_rate: args.sample_rate,
     return_url: returnUrl
   });
+  const filePath = assertOutputOutsidePackage(
+    resolveOutputPath(config2.outputDir, args.output_path, responseFormat),
+    config2.pluginRoot,
+    config2.managed
+  );
   const result = await client.createSpeech(params);
   if (result.kind === "url") {
     return textResult({
@@ -18075,7 +18101,6 @@ async function handler(args, ctx) {
       subtitles: result.subtitles
     });
   }
-  const filePath = resolveOutputPath(config2.outputDir, args.output_path, responseFormat);
   await writeBuffer(filePath, result.buffer);
   const { size } = await stat(filePath);
   return textResult({
@@ -18259,6 +18284,7 @@ var TOOLS = [text_to_speech_exports, list_voices_exports, clone_voice_exports];
 var SERVER_INFO = { name: "dfsc-stepaudio", version: "0.3.0" };
 var PLUGIN_ID = "dfsc-stepaudio";
 var HOST_CONSUMER = "stepaudio";
+var PLUGIN_ROOT2 = path6.resolve(path6.dirname(fileURLToPath3(import.meta.url)), "..");
 var FOLLOW_ONLY_NOTICE = "\u5F53\u524D\u4E3A\u5BBF\u4E3B\u8DDF\u968F\u6A21\u5F0F\uFF1A\u4EC5 text_to_speech \u53EF\u7528\uFF08broker model.tts\uFF0C\u9996\u6B21\u5408\u6210\u9700\u5BBF\u4E3B\u6388\u6743\uFF09\uFF1Blist_voices / clone_voice \u9700\u8981\u72EC\u7ACB\u6A21\u5F0F\u7684 API Key \u914D\u7F6E\u3002";
 function log(message) {
   process.stderr.write(`[dfsc-stepaudio] ${message}
@@ -18296,7 +18322,14 @@ async function main() {
   } else {
     try {
       config2 = await loadConfig(process.env);
-      client = new StepAudioClient(config2);
+      if (host !== null && host.configurationRevision !== null && typeof config2.revision === "string" && config2.revision !== host.configurationRevision) {
+        log(`\u914D\u7F6E revision \u4E0E\u542F\u52A8\u4E0A\u4E0B\u6587\u4E0D\u4E00\u81F4\uFF1Aconfig=${config2.revision.slice(0, 8)} context=${host.configurationRevision.slice(0, 8)}`);
+        contextError = "\u5BBF\u4E3B\u542F\u52A8\u4E0A\u4E0B\u6587\u4E0E\u5F53\u524D\u63D2\u4EF6\u914D\u7F6E\u4E0D\u4E00\u81F4\uFF08\u4E0A\u4E0B\u6587\u7B7E\u53D1\u540E\u914D\u7F6E\u5DF2\u88AB\u4FEE\u6539\uFF09\u3002\u8BF7\u91CD\u542F\u4F7F\u7528\u672C\u63D2\u4EF6\u7684\u4F1A\u8BDD\uFF1B\u4E0D\u8981\u7EE7\u7EED\u4F7F\u7528\u65E7\u4F1A\u8BDD\uFF08\u90A3\u4F1A\u9759\u9ED8\u6539\u7528\u65B0\u8D26\u6237\u4E0E\u8BA1\u8D39\u6E20\u9053\uFF09\u3002";
+        config2 = null;
+        client = null;
+      } else {
+        client = new StepAudioClient(config2);
+      }
     } catch (error2) {
       configError = error2 instanceof Error ? error2.message : String(error2);
       log(`\u914D\u7F6E\u672A\u5C31\u7EEA\uFF1A${configError}`);
@@ -18328,7 +18361,7 @@ async function main() {
       }
     }
     try {
-      return await tool.handler(request.params.arguments ?? {}, { client, config: config2, host, follow: followAllowed });
+      return await tool.handler(request.params.arguments ?? {}, { client, config: config2, host, follow: followAllowed, pluginRoot: PLUGIN_ROOT2 });
     } catch (error2) {
       const code = error2 instanceof McpToolError ? `\uFF08${error2.code}\uFF09` : "";
       const message = error2 instanceof Error ? error2.message : String(error2);
@@ -18338,7 +18371,9 @@ async function main() {
   });
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  if (follow) {
+  if (contextError) {
+    log("MCP \u670D\u52A1\u5DF2\u542F\u52A8\uFF0C\u4F46\u5BBF\u4E3B\u542F\u52A8\u4E0A\u4E0B\u6587/\u914D\u7F6E\u7ED1\u5B9A\u65E0\u6548\uFF1Btools/call \u5C06\u62D2\u7EDD\u5E76\u63D0\u793A\u91CD\u542F\u4F1A\u8BDD");
+  } else if (follow) {
     log("MCP \u670D\u52A1\u5DF2\u542F\u52A8\uFF08\u5BBF\u4E3B\u8DDF\u968F\u6A21\u5F0F\uFF1Atext_to_speech \u8D70 broker\uFF0C\u5176\u4F59\u5DE5\u5177\u9700\u72EC\u7ACB\u914D\u7F6E\uFF09");
   } else if (configError) {
     log("MCP \u670D\u52A1\u5DF2\u542F\u52A8\uFF0C\u4F46\u914D\u7F6E\u672A\u5C31\u7EEA\uFF1Btools/call \u5C06\u8FD4\u56DE\u914D\u7F6E\u9519\u8BEF\u4E0E\u914D\u7F6E\u65B9\u6CD5");

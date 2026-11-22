@@ -12,6 +12,8 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { loadConfig } from './config.js';
 import { StepAudioClient } from './client.js';
@@ -25,6 +27,8 @@ const SERVER_INFO = { name: 'dfsc-stepaudio', version: '0.3.0' };
 /** 与 dfsc.host.json 的 consumer 及 step.plugin.json 的 mcpServers 键一致。 */
 const PLUGIN_ID = 'dfsc-stepaudio';
 const HOST_CONSUMER = 'stepaudio';
+/** 插件包根：打包后位于 <package>/dist/index.js，上一级即包根（与 config.js 同源）。 */
+const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const FOLLOW_ONLY_NOTICE = '当前为宿主跟随模式：仅 text_to_speech 可用（broker model.tts，首次合成需宿主授权）；'
   + 'list_voices / clone_voice 需要独立模式的 API Key 配置。';
 
@@ -77,7 +81,20 @@ async function main() {
       // loadConfig 在托管布局下已调用 reader.current() 落定首个 revision（stamp），
       // 不在此处重复调用——整包指纹是秒级开销，启动路径只应有一次
       config = await loadConfig(process.env);
-      client = new StepAudioClient(config);
+      // 独立模式：启动读到的配置 revision 必须与宿主签发启动上下文时的
+      // configurationRevision 一致。不一致说明上下文签发后配置被改过（换了 Key/端点），
+      // 旧会话继续运行会静默改用新账户——拒绝并要求重启会话（host-client 的既定要求）。
+      if (host !== null && host.configurationRevision !== null
+        && typeof config.revision === 'string' && config.revision !== host.configurationRevision) {
+        log(`配置 revision 与启动上下文不一致：config=${config.revision.slice(0, 8)}`
+          + ` context=${host.configurationRevision.slice(0, 8)}`);
+        contextError = '宿主启动上下文与当前插件配置不一致（上下文签发后配置已被修改）。'
+          + '请重启使用本插件的会话；不要继续使用旧会话（那会静默改用新账户与计费渠道）。';
+        config = null;
+        client = null;
+      } else {
+        client = new StepAudioClient(config);
+      }
     } catch (error) {
       configError = error instanceof Error ? error.message : String(error);
       log(`配置未就绪：${configError}`);
@@ -115,7 +132,7 @@ async function main() {
       }
     }
     try {
-      return await tool.handler(request.params.arguments ?? {}, { client, config, host, follow: followAllowed });
+      return await tool.handler(request.params.arguments ?? {}, { client, config, host, follow: followAllowed, pluginRoot: PLUGIN_ROOT });
     } catch (error) {
       const code = error instanceof McpToolError ? `（${error.code}）` : '';
       const message = error instanceof Error ? error.message : String(error);
@@ -126,7 +143,9 @@ async function main() {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  if (follow) {
+  if (contextError) {
+    log('MCP 服务已启动，但宿主启动上下文/配置绑定无效；tools/call 将拒绝并提示重启会话');
+  } else if (follow) {
     log('MCP 服务已启动（宿主跟随模式：text_to_speech 走 broker，其余工具需独立配置）');
   } else if (configError) {
     log('MCP 服务已启动，但配置未就绪；tools/call 将返回配置错误与配置方法');

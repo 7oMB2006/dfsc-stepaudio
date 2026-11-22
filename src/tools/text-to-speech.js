@@ -1,5 +1,5 @@
 import { stat } from 'node:fs/promises';
-import { resolveOutputPath, writeBuffer } from '../lib/fs-utils.js';
+import { assertOutputOutsidePackage, resolveOutputPath, writeBuffer } from '../lib/fs-utils.js';
 import { McpToolError } from '../lib/errors.js';
 import { HostClientError, newRequestId } from '../lib/host-client/client.mjs';
 import { cleanParams, textResult } from './shared.js';
@@ -65,6 +65,12 @@ async function synthesizeViaHost(args, ctx) {
   if (!tts?.available) {
     throw hostError(new HostClientError(tts?.reason ?? 'CAPABILITY_UNAVAILABLE'));
   }
+  // 落盘路径在发起合成前定稿并校验：存在启动上下文即托管安装，不得写入插件包内
+  const filePath = assertOutputOutsidePackage(
+    resolveOutputPath(host.dataDirectory, args.output_path, format),
+    ctx.pluginRoot,
+    true,
+  );
   let result;
   try {
     result = await host.invoke({
@@ -79,7 +85,6 @@ async function synthesizeViaHost(args, ctx) {
 
   // 二进制音频的播放/命名/落盘由插件负责；不把 base64 当 URL 或已存路径
   const buffer = Buffer.from(result.data, 'base64');
-  const filePath = resolveOutputPath(host.dataDirectory, args.output_path, format);
   await writeBuffer(filePath, buffer);
   const { size } = await stat(filePath);
 
@@ -162,6 +167,14 @@ export async function handler(args, ctx) {
     return_url: returnUrl,
   });
 
+  // 落盘路径在发起合成前定稿并校验：托管安装下逐次 output_path 与 output_dir 同受
+  // “不得写入插件包内”约束（包内写入会改变 ConfigurationReader 校验的指纹）
+  const filePath = assertOutputOutsidePackage(
+    resolveOutputPath(config.outputDir, args.output_path, responseFormat),
+    config.pluginRoot,
+    config.managed,
+  );
+
   const result = await client.createSpeech(params);
 
   if (result.kind === 'url') {
@@ -175,7 +188,6 @@ export async function handler(args, ctx) {
     });
   }
 
-  const filePath = resolveOutputPath(config.outputDir, args.output_path, responseFormat);
   await writeBuffer(filePath, result.buffer);
   const { size } = await stat(filePath);
 

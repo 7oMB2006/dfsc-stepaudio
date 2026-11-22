@@ -112,6 +112,17 @@ test('text_to_speech return_url 模式不落盘', async () => {
   assert.equal(payload.url, 'https://f/a.mp3');
 });
 
+test('text_to_speech 托管安装拒绝包内 output_path（Codex 审查回归）', async () => {
+  const { ctx, client } = makeCtx();
+  ctx.config.managed = true;
+  ctx.config.pluginRoot = PLUGIN_ROOT;
+  await assert.rejects(
+    () => tts.handler({ text: 'hi', voice: 'v', output_path: 'inside-package.mp3' }, ctx),
+    /输出路径不能位于插件包内/,
+  );
+  assert.equal(client.calls.length, 0, '路径非法的请求不得发起合成');
+});
+
 test('text_to_speech 参数校验', async () => {
   const { ctx } = makeCtx();
   await assert.rejects(() => tts.handler({ text: '  ', voice: 'v' }, ctx), /text 不能为空/);

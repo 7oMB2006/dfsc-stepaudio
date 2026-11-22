@@ -8,6 +8,7 @@ import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createManagedLayout } from './helpers/managed-layout.mjs';
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ENTRY = path.join(PLUGIN_ROOT, 'dist', 'index.js');
@@ -99,9 +100,9 @@ function launchContext(origin, token, dataDirectory, extra = {}) {
 }
 
 /** 启动服务并按序发送 JSON-RPC 消息，返回响应表与 stderr。 */
-async function runServer(extraEnv, messages) {
-  const child = spawn(process.execPath, [ENTRY], {
-    cwd: PLUGIN_ROOT,
+async function runServer(extraEnv, messages, options = {}) {
+  const child = spawn(process.execPath, [options.entry ?? ENTRY], {
+    cwd: options.cwd ?? PLUGIN_ROOT,
     env: {
       PATH: process.env.PATH,
       SystemRoot: process.env.SystemRoot,
@@ -138,7 +139,7 @@ async function runServer(extraEnv, messages) {
   };
   return {
     child, responses, waitFor, getStderr: () => stderr, send,
-    close: () => new Promise((resolve) => { child.kill(); child.on('exit', resolve); }),
+    close: () => new Promise((resolve) => { if (child.exitCode !== null) return resolve(); const timer = setTimeout(resolve, 2000); child.once('exit', () => { clearTimeout(timer); resolve(); }); child.kill(); }),
   };
 }
 
@@ -298,6 +299,40 @@ test('启动上下文存在但无效：拒绝调用且不静默回退独立模�
     assert.match(server.getStderr(), /宿主启动上下文无效/);
   } finally {
     await server.close();
+  }
+});
+
+test('independent 启动上下文与配置 revision 不匹配：拒绝调用（Codex 审查回归）', async () => {
+  const layout = await createManagedLayout({
+    values: { mode: 'openapi', base_url: 'https://api.test/v1', api_key: 'k', model: 'stepaudio-2.5-tts' },
+    secrets: { api_key: 'k' },
+    packageFiles: ['package.json', 'step.plugin.json', 'dfsc.settings.json', 'dist/index.js'],
+  });
+  const contextRevision = 'b'.repeat(64);
+  const h = () => createHash('sha256').update('x').digest('hex');
+  const launch = {
+    version: 'dfsc-launch-v1', mode: 'independent', pluginId: 'dfsc-stepaudio', consumer: 'stepaudio',
+    instance: randomUUID(), fingerprint: h(), declarationHash: h(), revision: h(),
+    configurationRevision: contextRevision, launchId: randomUUID(), runtimeId: randomUUID(),
+    sessionId: 'revision-mismatch', accountRevision: h(), capabilities: ['model.tts'],
+    models: {}, dataDirectory: path.join(layout.root, 'data'),
+  };
+  const server = await runServer({ DFSC_LAUNCH_CONTEXT: JSON.stringify(launch) }, [
+    INITIALIZE,
+    { jsonrpc: '2.0', method: 'notifications/initialized' },
+    { jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'text_to_speech', arguments: { text: 'x', voice: 'v' } } },
+  ], { entry: path.join(layout.pkg, 'dist', 'index.js'), cwd: layout.root });
+  try {
+    const init = await server.waitFor(1, 5000);
+    assert.ok(init, 'initialize 超时；stderr=' + server.getStderr());
+    const call = await server.waitFor(2, 5000);
+    assert.ok(call, 'tools/call 超时；stderr=' + server.getStderr());
+    assert.equal(call.result.isError, true);
+    assert.match(call.result.content[0].text, /宿主启动上下文与当前插件配置不一致/);
+    assert.doesNotMatch(call.result.content[0].text, /配置错误/);
+  } finally {
+    await server.close();
+    await fs.rm(layout.root, { recursive: true, force: true });
   }
 });
 
