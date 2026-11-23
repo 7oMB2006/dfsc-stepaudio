@@ -143,6 +143,40 @@ async function runServer(extraEnv, messages, options = {}) {
   };
 }
 
+/** 独立配置使用的本地 API fixture：覆盖音色列表与复刻，不访问外网。 */
+async function startIndependentApi() {
+  const calls = [];
+  const server = createServer((request, response) => {
+    const chunks = [];
+    request.on('data', (chunk) => chunks.push(chunk));
+    request.on('end', () => {
+      const path = request.url ?? '';
+      calls.push([request.method, path]);
+      const send = (status, payload, contentType = 'application/json') => {
+        response.writeHead(status, { 'content-type': contentType });
+        response.end(contentType === 'application/json' ? JSON.stringify(payload) : payload);
+      };
+      if (request.method === 'GET' && path.startsWith('/v1/audio/system_voices')) {
+        send(200, { voices: ['fixture-voice'], 'voices-details': { 'fixture-voice': { 'voice-name': 'Fixture' } } });
+      } else if (request.method === 'GET' && path.startsWith('/v1/audio/voices')) {
+        send(200, { data: [{ id: 'voice-fixture', file_id: 'file-fixture', created_at: 1 }] });
+      } else if (request.method === 'POST' && path === '/v1/audio/voices') {
+        send(200, { id: 'voice-created', duplicated: false });
+      } else if (request.method === 'POST' && path === '/v1/audio/speech') {
+        send(200, Buffer.from('INDEPENDENT-AUDIO'), 'audio/mpeg');
+      } else {
+        send(404, { error: { message: 'not found' } });
+      }
+    });
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  return {
+    calls,
+    origin: `http://127.0.0.1:${server.address().port}`,
+    stop: () => new Promise((resolve) => { server.closeAllConnections(); server.close(resolve); }),
+  };
+}
+
 const HANDSHAKE = (extraCalls) => [
   INITIALIZE,
   { jsonrpc: '2.0', method: 'notifications/initialized' },
@@ -333,6 +367,121 @@ test('independent 启动上下文与配置 revision 不匹配：拒绝调用（C
   } finally {
     await server.close();
     await fs.rm(layout.root, { recursive: true, force: true });
+  }
+});
+
+test('independentTools 混合来源：合成走 Broker，列音色/复刻走独立配置', async () => {
+  const broker = await startBroker({});
+  const api = await startIndependentApi();
+  const dataDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'dfsc-broker-data-'));
+  const context = launchContext(broker.origin, broker.token, dataDirectory, {
+    configurationRevision: 'c'.repeat(64),
+    independentCapabilities: [],
+  });
+  const server = await runServer({
+    DFSC_LAUNCH_CONTEXT: context,
+    STEP_API_KEY: 'independent-fixture-key',
+    STEPAUDIO_BASE_URL: `${api.origin}/v1`,
+  }, [
+    INITIALIZE,
+    { jsonrpc: '2.0', method: 'notifications/initialized' },
+    { jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'text_to_speech', arguments: { text: 'broker audio', voice: 'v' } } },
+    { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'list_voices', arguments: { scope: 'official' } } },
+    { jsonrpc: '2.0', id: 4, method: 'tools/call', params: { name: 'clone_voice', arguments: { file_id: 'file-fixture' } } },
+  ]);
+  try {
+    await server.waitFor(1);
+    const tts = await server.waitFor(2);
+    assert.notEqual(tts.result.isError, true, tts.result?.content?.[0]?.text);
+    assert.equal(JSON.parse(tts.result.content[0].text).mode, 'follow');
+    const voices = await server.waitFor(3);
+    assert.notEqual(voices.result.isError, true, voices.result?.content?.[0]?.text);
+    assert.equal(JSON.parse(voices.result.content[0].text).official.source, 'api');
+    const clone = await server.waitFor(4);
+    assert.notEqual(clone.result.isError, true, clone.result?.content?.[0]?.text);
+    assert.equal(JSON.parse(clone.result.content[0].text).voice_id, 'voice-created');
+    assert.equal(broker.calls.invoke, 1);
+    assert.deepEqual(api.calls.map(([method]) => method), ['GET', 'POST']);
+  } finally {
+    await server.close();
+    await broker.stop();
+    await api.stop();
+    await fs.rm(dataDirectory, { recursive: true, force: true });
+  }
+});
+
+test('independentTools 未分配模型行：TTS 拒绝，独立工具仍可用', async () => {
+  const api = await startIndependentApi();
+  const dataDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'dfsc-broker-data-'));
+  const context = launchContext('http://127.0.0.1:1', 'unused', dataDirectory, {
+    mode: 'independent',
+    capabilities: [],
+    models: {},
+    configurationRevision: 'c'.repeat(64),
+    independentCapabilities: [],
+    broker: undefined,
+  });
+  const server = await runServer({
+    DFSC_LAUNCH_CONTEXT: context,
+    STEP_API_KEY: 'independent-fixture-key',
+    STEPAUDIO_BASE_URL: `${api.origin}/v1`,
+  }, [
+    INITIALIZE,
+    { jsonrpc: '2.0', method: 'notifications/initialized' },
+    { jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'text_to_speech', arguments: { text: 'no route', voice: 'v' } } },
+    { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'list_voices', arguments: { scope: 'official' } } },
+    { jsonrpc: '2.0', id: 4, method: 'tools/call', params: { name: 'clone_voice', arguments: { file_id: 'file-fixture' } } },
+  ]);
+  try {
+    await server.waitFor(1);
+    const tts = await server.waitFor(2);
+    assert.equal(tts.result.isError, true);
+    assert.match(tts.result.content[0].text, /未给 text_to_speech 分配模型来源/);
+    const voices = await server.waitFor(3);
+    assert.notEqual(voices.result.isError, true, voices.result?.content?.[0]?.text);
+    const clone = await server.waitFor(4);
+    assert.notEqual(clone.result.isError, true, clone.result?.content?.[0]?.text);
+    assert.equal(JSON.parse(clone.result.content[0].text).voice_id, 'voice-created');
+    assert.ok(!api.calls.some(([method, path]) => method === 'POST' && path === '/v1/audio/speech'));
+  } finally {
+    await server.close();
+    await api.stop();
+    await fs.rm(dataDirectory, { recursive: true, force: true });
+  }
+});
+
+test('independentTools 模型行分配独立 API：TTS 直连且不经过 Broker', async () => {
+  const api = await startIndependentApi();
+  const dataDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'dfsc-broker-data-'));
+  const context = launchContext('http://127.0.0.1:1', 'unused', dataDirectory, {
+    mode: 'independent',
+    capabilities: ['model.tts'],
+    models: {},
+    configurationRevision: 'c'.repeat(64),
+    independentCapabilities: ['model.tts'],
+    broker: undefined,
+  });
+  const server = await runServer({
+    DFSC_LAUNCH_CONTEXT: context,
+    STEP_API_KEY: 'independent-fixture-key',
+    STEPAUDIO_BASE_URL: `${api.origin}/v1`,
+  }, [
+    INITIALIZE,
+    { jsonrpc: '2.0', method: 'notifications/initialized' },
+    { jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'text_to_speech', arguments: { text: 'independent audio', voice: 'v' } } },
+  ]);
+  try {
+    await server.waitFor(1);
+    const tts = await server.waitFor(2);
+    assert.notEqual(tts.result.isError, true, tts.result?.content?.[0]?.text);
+    const payload = JSON.parse(tts.result.content[0].text);
+    assert.equal(payload.kind, 'file');
+    assert.equal(await fs.readFile(payload.file, 'utf8'), 'INDEPENDENT-AUDIO');
+    assert.deepEqual(api.calls, [['POST', '/v1/audio/speech']]);
+  } finally {
+    await server.close();
+    await api.stop();
+    await fs.rm(dataDirectory, { recursive: true, force: true });
   }
 });
 

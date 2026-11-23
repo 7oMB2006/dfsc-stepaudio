@@ -17656,8 +17656,13 @@ function parseModelSelection(value, declared) {
     if (!declared.includes(capability) || !text(model, 160) || /[\u0000-\u001f]/u.test(model)) fail2();
   return { ...value };
 }
-function capabilities(value) {
-  if (!Array.isArray(value) || !value.length || value.length > CAPABILITIES.length || value.some((item) => !CAPABILITIES.includes(item)) || new Set(value).size !== value.length) fail2();
+function capabilities(value, allowEmpty = false) {
+  if (!Array.isArray(value) || !allowEmpty && !value.length || value.length > CAPABILITIES.length || value.some((item) => !CAPABILITIES.includes(item)) || new Set(value).size !== value.length) fail2();
+}
+function parseIndependentCapabilities(value, declared, allowEmpty = false) {
+  capabilities(value, allowEmpty);
+  if (value.some((item) => !declared.includes(item))) fail2();
+  return [...value];
 }
 function parseLaunch(value, expected, now = Date.now()) {
   boundedJson(value, LIMITS.launch);
@@ -17680,7 +17685,8 @@ function parseLaunch(value, expected, now = Date.now()) {
       "capabilities",
       "models",
       "dataDirectory",
-      "broker"
+      "broker",
+      "independentCapabilities"
     ],
     [
       "version",
@@ -17703,12 +17709,14 @@ function parseLaunch(value, expected, now = Date.now()) {
   );
   if (value.version !== "dfsc-launch-v1") fail2("UNSUPPORTED_VERSION");
   if (!text(value.pluginId, 128) || !id(value.consumer) || !uuid2(value.instance) || !uuid2(value.launchId) || !uuid2(value.runtimeId) || !text(value.sessionId, 128) || !hash2(value.fingerprint) || !hash2(value.declarationHash) || !hash2(value.revision) || !hash2(value.accountRevision) || !text(value.dataDirectory, 4096) || !isAbsolute(value.dataDirectory) || value.pluginId !== expected.pluginId || value.consumer !== expected.consumer) fail2();
-  capabilities(value.capabilities);
+  capabilities(value.capabilities, value.mode === "independent" && Array.isArray(value.independentCapabilities));
   parseModelSelection(value.models, value.capabilities);
+  const independent = value.independentCapabilities === void 0 ? void 0 : parseIndependentCapabilities(value.independentCapabilities, CAPABILITIES, true);
+  if (independent && (!hash2(value.configurationRevision) || (value.mode === "follow" ? independent.some((item) => value.capabilities.includes(item)) : independent.length !== value.capabilities.length || independent.some((item) => !value.capabilities.includes(item))))) fail2();
   if (value.mode === "independent") {
     if (!hash2(value.configurationRevision) || value.broker !== void 0 || Object.keys(value.models).length) fail2();
   } else if (value.mode === "follow") {
-    if (value.configurationRevision !== null) fail2();
+    if (!independent && value.configurationRevision !== null) fail2();
     keys(value.broker, ["origin", "token", "expiresAt"]);
     const { origin, token, expiresAt } = value.broker;
     let url;
@@ -17903,6 +17911,7 @@ function createHostClient({ pluginId, consumer, environment = process.env, fetch
     mode: launch.mode,
     dataDirectory: launch.dataDirectory,
     configurationRevision: launch.configurationRevision,
+    ...launch.independentCapabilities ? { independentCapabilities: Object.freeze([...launch.independentCapabilities]) } : {},
     async context(options = {}) {
       return parseContext(await call("context", {}, 1e4, options.signal), launch.capabilities);
     },
@@ -18286,6 +18295,7 @@ var PLUGIN_ID = "dfsc-stepaudio";
 var HOST_CONSUMER = "stepaudio";
 var PLUGIN_ROOT2 = path6.resolve(path6.dirname(fileURLToPath3(import.meta.url)), "..");
 var FOLLOW_ONLY_NOTICE = "\u5F53\u524D\u4E3A\u5BBF\u4E3B\u8DDF\u968F\u6A21\u5F0F\uFF1A\u4EC5 text_to_speech \u53EF\u7528\uFF08broker model.tts\uFF0C\u9996\u6B21\u5408\u6210\u9700\u5BBF\u4E3B\u6388\u6743\uFF09\uFF1Blist_voices / clone_voice \u9700\u8981\u72EC\u7ACB\u6A21\u5F0F\u7684 API Key \u914D\u7F6E\u3002";
+var NO_MODEL_SOURCE_NOTICE = "\u5F53\u524D\u5BBF\u4E3B\u672A\u7ED9 text_to_speech \u5206\u914D\u6A21\u578B\u6765\u6E90\u3002\u8BF7\u5728\u63D2\u4EF6\u4E2D\u5FC3\u4E3A\u8BED\u97F3\u5408\u6210\u9009\u62E9 Step Plan\u3001\u5F00\u653E\u5E73\u53F0 API \u6216\u72EC\u7ACB\u914D\u7F6E\u540E\u91CD\u542F\u4F1A\u8BDD\u3002";
 function log(message) {
   process.stderr.write(`[dfsc-stepaudio] ${message}
 `);
@@ -18310,16 +18320,19 @@ async function main() {
     }
   }
   const follow = host !== null && host.mode === "follow";
+  const independentTools = host !== null && Array.isArray(host.independentCapabilities);
+  const independentTts = independentTools && host.independentCapabilities.includes("model.tts");
+  const brokerTts = follow && !independentTts;
+  const independentToolsAllowed = !follow || independentTools;
+  const independentTtsAllowed = !follow && !independentTools || independentTts;
+  const needsIndependentConfig = independentToolsAllowed || independentTtsAllowed;
   process.on("exit", () => {
     host?.close();
   });
   let config2 = null;
   let client = null;
   let configError = null;
-  if (follow) {
-    configError = FOLLOW_ONLY_NOTICE;
-    log("\u5BBF\u4E3B\u8DDF\u968F\u6A21\u5F0F\uFF1Atext_to_speech \u8D70 broker\uFF08\u9996\u6B21\u5408\u6210\u7B49\u5F85\u5BBF\u4E3B\u6388\u6743\uFF09");
-  } else {
+  if (needsIndependentConfig) {
     try {
       config2 = await loadConfig(process.env);
       if (host !== null && host.configurationRevision !== null && typeof config2.revision === "string" && config2.revision !== host.configurationRevision) {
@@ -18332,9 +18345,10 @@ async function main() {
       }
     } catch (error2) {
       configError = error2 instanceof Error ? error2.message : String(error2);
-      log(`\u914D\u7F6E\u672A\u5C31\u7EEA\uFF1A${configError}`);
+      log(`\u72EC\u7ACB\u914D\u7F6E\u672A\u5C31\u7EEA\uFF1A${configError}`);
     }
   }
+  if (brokerTts) log("\u5BBF\u4E3B Broker \u5DF2\u5206\u914D\u8BED\u97F3\u5408\u6210\uFF1Atext_to_speech \u8D70 broker\uFF08\u9996\u6B21\u5408\u6210\u7B49\u5F85\u5BBF\u4E3B\u6388\u6743\uFF09");
   const server = new Server(SERVER_INFO, { capabilities: { tools: {} } });
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: TOOLS.map((tool) => ({
@@ -18347,10 +18361,15 @@ async function main() {
     if (contextError) return errorResult(contextError);
     const name = request.params.name;
     const tool = TOOLS.find((candidate) => candidate.definition.name === name);
-    const followAllowed = follow && tool?.definition.name === definition.name;
-    if (configError && !followAllowed) return errorResult(`\u914D\u7F6E\u9519\u8BEF\uFF1A${configError}`);
     if (!tool) return errorResult(`\u672A\u77E5\u5DE5\u5177\uFF1A${name}`);
-    if (config2?.managed && !follow) {
+    const isTts = tool.definition.name === definition.name;
+    const useBroker = isTts && brokerTts;
+    const useIndependent = isTts ? independentTtsAllowed : independentToolsAllowed;
+    if (!useBroker && !useIndependent) {
+      return errorResult(isTts ? NO_MODEL_SOURCE_NOTICE : FOLLOW_ONLY_NOTICE);
+    }
+    if (useIndependent && configError) return errorResult(`\u914D\u7F6E\u9519\u8BEF\uFF1A${configError}`);
+    if (useIndependent && config2?.managed) {
       try {
         const snapshot = await config2.reader.current();
         if (snapshot.revision !== config2.revision) {
@@ -18361,7 +18380,13 @@ async function main() {
       }
     }
     try {
-      return await tool.handler(request.params.arguments ?? {}, { client, config: config2, host, follow: followAllowed, pluginRoot: PLUGIN_ROOT2 });
+      return await tool.handler(request.params.arguments ?? {}, {
+        client,
+        config: config2,
+        host,
+        follow: useBroker,
+        pluginRoot: PLUGIN_ROOT2
+      });
     } catch (error2) {
       const code = error2 instanceof McpToolError ? `\uFF08${error2.code}\uFF09` : "";
       const message = error2 instanceof Error ? error2.message : String(error2);
@@ -18373,8 +18398,14 @@ async function main() {
   await server.connect(transport);
   if (contextError) {
     log("MCP \u670D\u52A1\u5DF2\u542F\u52A8\uFF0C\u4F46\u5BBF\u4E3B\u542F\u52A8\u4E0A\u4E0B\u6587/\u914D\u7F6E\u7ED1\u5B9A\u65E0\u6548\uFF1Btools/call \u5C06\u62D2\u7EDD\u5E76\u63D0\u793A\u91CD\u542F\u4F1A\u8BDD");
-  } else if (follow) {
-    log("MCP \u670D\u52A1\u5DF2\u542F\u52A8\uFF08\u5BBF\u4E3B\u8DDF\u968F\u6A21\u5F0F\uFF1Atext_to_speech \u8D70 broker\uFF0C\u5176\u4F59\u5DE5\u5177\u9700\u72EC\u7ACB\u914D\u7F6E\uFF09");
+  } else if (brokerTts && independentTools) {
+    log("MCP \u670D\u52A1\u5DF2\u542F\u52A8\uFF08\u8BED\u97F3\u5408\u6210\u8D70 Broker\uFF1B\u63D2\u4EF6\u81EA\u6709\u5DE5\u5177\u8D70\u72EC\u7ACB\u914D\u7F6E\uFF09");
+  } else if (brokerTts) {
+    log("MCP \u670D\u52A1\u5DF2\u542F\u52A8\uFF08\u5BBF\u4E3B Broker \u6A21\u5F0F\uFF1Atext_to_speech \u8D70 broker\uFF09");
+  } else if (independentTtsAllowed && independentTools) {
+    log("MCP \u670D\u52A1\u5DF2\u542F\u52A8\uFF08\u8BED\u97F3\u5408\u6210\u4E0E\u63D2\u4EF6\u81EA\u6709\u5DE5\u5177\u8D70\u72EC\u7ACB\u914D\u7F6E\uFF09");
+  } else if (independentToolsAllowed) {
+    log("MCP \u670D\u52A1\u5DF2\u542F\u52A8\uFF08\u63D2\u4EF6\u81EA\u6709\u5DE5\u5177\u8D70\u72EC\u7ACB\u914D\u7F6E\uFF1B\u672A\u5206\u914D Broker \u6A21\u578B\uFF09");
   } else if (configError) {
     log("MCP \u670D\u52A1\u5DF2\u542F\u52A8\uFF0C\u4F46\u914D\u7F6E\u672A\u5C31\u7EEA\uFF1Btools/call \u5C06\u8FD4\u56DE\u914D\u7F6E\u9519\u8BEF\u4E0E\u914D\u7F6E\u65B9\u6CD5");
   } else {

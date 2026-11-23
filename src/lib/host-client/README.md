@@ -33,6 +33,24 @@ host.close();
 作者可以让工具显示该能力不可用，不能捕获后偷偷改用环境 Key。
 `context()` 不触发调用；`invoke()` 本身不证明已获得用户同意。
 
+## 按能力混用
+
+只有已经实现逐项派发的插件才应在 `dfsc.host.json` 中设置 `independentCapabilities`。
+收到该字段后，不要再用 `host.mode` 给整个插件选择供应商：
+
+1. 在 `host.independentCapabilities` 中的能力只走插件自己的连接。调用前读取并核对
+   已提交独立配置的修订与 `host.configurationRevision` 一致。
+2. 其他能力只有在 `host.mode === 'follow'` 且 `host.context()` 对该项返回可用时才可用 Broker。
+3. 两边都没分配的能力不可用。任一来源失败，均不改走另一条路。
+
+`host.independentCapabilities` 缺失时，沿用旧版的整套模式。插件能读取的仍仅是为它保存的
+独立配置；官方账户的 Key 不进入插件。保存来源不是扣费授权。
+
+插件自己的工具需要独立配置，但不需要占用模型行时，可声明 `independentTools: true`，
+并提供同一消费者的 `dfsc.settings.json`。这不增加可直连的模型行，也不自动授权。
+使用支持空路由的新客户端：`host.independentCapabilities` 为 `[]` 时，表示独立配置已启用、
+没有模型行分配给直连。使用配置前同样核对 `host.configurationRevision`。
+
 client 启动时消耗并删除载荷，普通后代不会意外继承它；
 多进程插件由登记的 MCP 进程保留 client，以自身业务 IPC 传回结果。
 这不阻止作者主动转交 bearer 或同系统用户的恶意读取。

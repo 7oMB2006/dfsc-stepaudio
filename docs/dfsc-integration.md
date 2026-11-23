@@ -69,12 +69,17 @@ MCP 能力通过 `mcpServers` 段声明（字段取自 BVR 范例）：
 
 **启动**：server 入口创建一次 `createHostClient({pluginId, consumer})`，消费宿主注入的 `DFSC_LAUNCH_CONTEXT`（不复制、不打印、不转交；退出时 `host.close()`）。无启动上下文（如宿主发布验收的最小环境）时抛 `HOST_UNAVAILABLE`，服务降级为独立模式照常握手。
 
-**模式分支**（两分支失败均不静默互切）：
+**来源分支**（两分支失败均不静默互切）：
 
-| 模式 | 合成 | 列音色 / 复刻 |
+| 启动上下文 | 合成 | 列音色 / 复刻 |
 | --- | --- | --- |
-| `follow`（宿主 broker） | 走 broker，零 Key，首次合成等宿主授权 | 不可用（broker 无音色管理入口，返回需独立模式的提示） |
-| `independent` | 现有 API Key 链路（托管设置 / env / CLI 私密配置），继续核对 `configurationRevision` fail-closed | 可用 |
+| 旧版 `follow`（无 `independentCapabilities`） | 走 broker，零 Key，首次合成等宿主授权 | 不可用（broker 无音色管理入口） |
+| `independentTools` + `independentCapabilities: []` | 已分配 Broker 模型行时走 broker，零 Key | 走独立配置 |
+| `independentCapabilities` 包含 `model.tts` | 走独立 API Key 链路 | 走独立配置 |
+| 未分配任何模型行 | 明确拒绝，不借用其他来源 | 独立配置可用时可用 |
+| 旧版 `independent` / 无启动上下文 | 现有 API Key 链路（托管设置 / env / CLI 私密配置），核对 `configurationRevision` fail-closed | 可用 |
+
+`dfsc.host.json` 声明 `independentTools: true`，让宿主把“插件自有工具”分配给独立配置，而不必占用模型行。宿主签发 `independentCapabilities: []` 时仍表示独立配置已启用；插件每次独立调用前核对配置修订。Broker 调用失败不改走独立配置，反之亦然。
 
 **broker 调用序列**（每次 `tools/call`：`context()` 不产生模型请求，`invoke()` 首次触发宿主授权）：
 

@@ -31,6 +31,7 @@ const HOST_CONSUMER = 'stepaudio';
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const FOLLOW_ONLY_NOTICE = '当前为宿主跟随模式：仅 text_to_speech 可用（broker model.tts，首次合成需宿主授权）；'
   + 'list_voices / clone_voice 需要独立模式的 API Key 配置。';
+const NO_MODEL_SOURCE_NOTICE = '当前宿主未给 text_to_speech 分配模型来源。请在插件中心为语音合成选择 Step Plan、开放平台 API 或独立配置后重启会话。';
 
 function log(message) {
   // stdio 传输下 stdout 是 JSON-RPC 通道，日志只能走 stderr
@@ -65,25 +66,28 @@ async function main() {
     }
   }
   const follow = host !== null && host.mode === 'follow';
+  // independentTools 让宿主把“插件自己的工具”分配给独立配置，即使独立能力集合为空。
+  // 旧上下文没有该字段，继续沿用整套 follow/independent 行为。
+  const independentTools = host !== null && Array.isArray(host.independentCapabilities);
+  const independentTts = independentTools && host.independentCapabilities.includes('model.tts');
+  const brokerTts = follow && !independentTts;
+  const independentToolsAllowed = !follow || independentTools;
+  const independentTtsAllowed = (!follow && !independentTools) || independentTts;
+  const needsIndependentConfig = independentToolsAllowed || independentTtsAllowed;
   process.on('exit', () => { host?.close(); });
 
   // 配置在启动时加载；失败不阻断握手，错误在 tools/call 时返回，便于用户看到可操作的提示
   let config = null;
   let client = null;
   let configError = null;
-  if (follow) {
-    // 跟随模式的 launch context 里 configurationRevision 为 null：不读独立配置、
-    // 不需要 API Key。broker 只提供合成，列音色/复刻没有入口，用固定提示挡住其余工具。
-    configError = FOLLOW_ONLY_NOTICE;
-    log('宿主跟随模式：text_to_speech 走 broker（首次合成等待宿主授权）');
-  } else {
+  if (needsIndependentConfig) {
     try {
       // loadConfig 在托管布局下已调用 reader.current() 落定首个 revision（stamp），
       // 不在此处重复调用——整包指纹是秒级开销，启动路径只应有一次
       config = await loadConfig(process.env);
-      // 独立模式：启动读到的配置 revision 必须与宿主签发启动上下文时的
+      // 独立工具或独立 TTS：启动读到的配置 revision 必须与宿主签发启动上下文时的
       // configurationRevision 一致。不一致说明上下文签发后配置被改过（换了 Key/端点），
-      // 旧会话继续运行会静默改用新账户——拒绝并要求重启会话（host-client 的既定要求）。
+      // 旧会话继续运行会静默改用新账户——拒绝并要求重启会话。
       if (host !== null && host.configurationRevision !== null
         && typeof config.revision === 'string' && config.revision !== host.configurationRevision) {
         log(`配置 revision 与启动上下文不一致：config=${config.revision.slice(0, 8)}`
@@ -97,9 +101,10 @@ async function main() {
       }
     } catch (error) {
       configError = error instanceof Error ? error.message : String(error);
-      log(`配置未就绪：${configError}`);
+      log(`独立配置未就绪：${configError}`);
     }
   }
+  if (brokerTts) log('宿主 Broker 已分配语音合成：text_to_speech 走 broker（首次合成等待宿主授权）');
 
   const server = new Server(SERVER_INFO, { capabilities: { tools: {} } });
 
@@ -116,12 +121,16 @@ async function main() {
     if (contextError) return errorResult(contextError);
     const name = request.params.name;
     const tool = TOOLS.find((candidate) => candidate.definition.name === name);
-    // 跟随模式下 broker 只覆盖合成；其余工具仍需独立配置，由固定提示挡住
-    const followAllowed = follow && tool?.definition.name === textToSpeech.definition.name;
-    if (configError && !followAllowed) return errorResult(`配置错误：${configError}`);
     if (!tool) return errorResult(`未知工具：${name}`);
-    if (config?.managed && !follow) {
-      // 每次调用前复审：revision 变化或读取失败都只让本次调用失败，服务不退出
+    const isTts = tool.definition.name === textToSpeech.definition.name;
+    const useBroker = isTts && brokerTts;
+    const useIndependent = isTts ? independentTtsAllowed : independentToolsAllowed;
+    if (!useBroker && !useIndependent) {
+      return errorResult(isTts ? NO_MODEL_SOURCE_NOTICE : FOLLOW_ONLY_NOTICE);
+    }
+    if (useIndependent && configError) return errorResult(`配置错误：${configError}`);
+    if (useIndependent && config?.managed) {
+      // 独立工具/独立 TTS 每次调用前复审：revision 变化或读取失败都只让本次调用失败，服务不退出
       try {
         const snapshot = await config.reader.current();
         if (snapshot.revision !== config.revision) {
@@ -132,7 +141,9 @@ async function main() {
       }
     }
     try {
-      return await tool.handler(request.params.arguments ?? {}, { client, config, host, follow: followAllowed, pluginRoot: PLUGIN_ROOT });
+      return await tool.handler(request.params.arguments ?? {}, {
+        client, config, host, follow: useBroker, pluginRoot: PLUGIN_ROOT,
+      });
     } catch (error) {
       const code = error instanceof McpToolError ? `（${error.code}）` : '';
       const message = error instanceof Error ? error.message : String(error);
@@ -145,8 +156,14 @@ async function main() {
   await server.connect(transport);
   if (contextError) {
     log('MCP 服务已启动，但宿主启动上下文/配置绑定无效；tools/call 将拒绝并提示重启会话');
-  } else if (follow) {
-    log('MCP 服务已启动（宿主跟随模式：text_to_speech 走 broker，其余工具需独立配置）');
+  } else if (brokerTts && independentTools) {
+    log('MCP 服务已启动（语音合成走 Broker；插件自有工具走独立配置）');
+  } else if (brokerTts) {
+    log('MCP 服务已启动（宿主 Broker 模式：text_to_speech 走 broker）');
+  } else if (independentTtsAllowed && independentTools) {
+    log('MCP 服务已启动（语音合成与插件自有工具走独立配置）');
+  } else if (independentToolsAllowed) {
+    log('MCP 服务已启动（插件自有工具走独立配置；未分配 Broker 模型）');
   } else if (configError) {
     log('MCP 服务已启动，但配置未就绪；tools/call 将返回配置错误与配置方法');
   } else {

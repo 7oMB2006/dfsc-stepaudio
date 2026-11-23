@@ -2,6 +2,8 @@
 
 ## 0.3.0
 
+- **适配宿主 `independentTools`（broker-v018）**：模型行与插件自有工具可分别选择 Step Plan、开放平台 API 或独立配置；合成按 Broker 分配路由，列音色/复刻使用独立配置，未分配模型行时明确拒绝。同步上游标准 client/protocol（支持空 `independentCapabilities`），新增混合来源、纯独立工具、独立 TTS 三类回归；全量 73/73。
+
 - 新增**跟随宿主模式**（上游 #247，宿主 r8+，merge commit `036ae94`）：包内 `dfsc.host.json` 声明 `model.tts`，server 启动时消费宿主 `DFSC_LAUNCH_CONTEXT`；`text_to_speech` 可走宿主 broker 用当前会话官方 Step 账户合成，**零 Key**，首次合成等待宿主逐能力授权。
 - 跟随模式边界：仅 `text`/`voice`/`response_format`（mp3/wav/pcm）三个入参、单次 ≤1000 字符、音频解码后 ≤16 MiB，写入宿主数据目录；`model`/`instruction`/`speed`/`sample_rate`/`return_url` 被忽略并在结果中以 `follow_ignored` 声明；`list_voices`/`clone_voice` 在跟随模式下返回需独立模式的提示（broker 无音色管理入口）。
 - 模式语义：`follow` 与 `independent` 失败均不静默互切；租约过期（STALE_CONTEXT）需重启会话，不自动续约；无启动上下文（老宿主/外部启动）自动按独立模式运行，行为同 0.2.0。
