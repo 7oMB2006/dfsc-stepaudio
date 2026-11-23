@@ -58,12 +58,15 @@ node scripts\configure.mjs --profile <私密目录> --check
 
 ### 跟随宿主模式（零 Key 合成）
 
-宿主 r8+（上游 #247，merge commit `036ae94`）提供受限官方账户 TTS broker。宿主注入启动上下文后，插件按上下文分两种模式，**失败不静默互切**：
+宿主 r8+（上游 #247，merge commit `036ae94`）提供受限官方账户 TTS broker。宿主注入启动上下文后，插件按上下文分配来源，**失败不静默互切**：
 
-| 模式 | 合成 | 列音色 / 复刻 |
+| 来源分配 | 合成 | 列音色 / 复刻 |
 | --- | --- | --- |
-| 跟随宿主（broker） | `text_to_speech` 走 broker，用当前会话的官方 Step 账户，**无需 Key**；首次合成等待宿主授权 | 不可用（broker 无音色管理入口） |
-| 独立配置 | 用上面设置页/环境变量的 API Key | 可用 |
+| 旧版整套跟随宿主 | `text_to_speech` 走 broker，用官方 Step 账户，**无需 Key**；首次合成等待宿主授权 | 不可用（broker 无音色管理入口） |
+| 混合来源（`independentTools`） | 语音合成行选择 Step Plan / 开放平台 API 时走 broker，零 Key | 走插件独立配置，需 API Key |
+| 独立配置 | 用设置页/环境变量的 API Key 直连 | 可用 |
+
+`independentTools` 让宿主把模型行与插件自有工具分别分配来源；即使独立能力集合为空，列音色/复刻仍可使用独立配置。未分配模型行的 `text_to_speech` 会明确拒绝，不借用其他来源。
 
 跟随模式只支持 `text` / `voice` / `response_format`（mp3/wav/pcm）三个入参，单次 ≤1000 字符，音频写入宿主数据目录；`model`/`instruction`/`speed` 等入参被忽略并在结果中声明。老宿主（无 broker）自动按独立模式运行，行为与 0.2.0 一致。细节见 [docs/dfsc-integration.md](docs/dfsc-integration.md)。
 
