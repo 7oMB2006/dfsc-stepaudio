@@ -52,7 +52,7 @@ MCP 能力通过 `mcpServers` 段声明（字段取自 BVR 范例）：
 
 ### 跟随 DFSC 模式（broker TTS，2026-11-15 起已接入）
 
-上游 #247（merge commit `036ae94`，宿主 r8+）合入了受限官方账户 TTS broker 的生产适配，本插件已接入（`src/lib/host-client/` + `dfsc.host.json`）。**r7 及更旧宿主不含此适配**；是否可用必须查 `context()`，不能只看声明或版本号。
+DFSC 1.0+（v018 运行时，1.0.0 起正式搭载）提供受限官方账户 TTS broker，本插件已接入（`src/lib/host-client/` + `dfsc.host.json`）。1.0.1 的 host-client/Broker 协议与 broker-v018 一致；是否可用必须查 `context()`，不能只看声明或版本号。
 
 **声明**：包内 `dfsc.host.json`——
 

@@ -1,6 +1,6 @@
 {
   "name": "dfsc-stepaudio",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "DFSC 插件：阶跃 StepAudio TTS 的 MCP 服务（语音合成 / 音色列表 / 音色复刻）。开发用官方 MCP SDK，分发为自包含单文件 dist/index.js，用户无需包管理器依赖",
   "type": "module",

@@ -5,7 +5,7 @@
 ## 一、提交前核对清单
 
 - [x] **真机安装验收（硬门）**：已通过两轮——(1) 2026-11-14 真机 17/17（本地构建宿主，playwright 驱动，`docs/acceptance-runbook.md`）；(2) 2026-11-15 宿主官方 `verify-stepaudio-release.mjs` 10/10（宿主 `main-20261115-036ae94`，即上游 #247）。残留仅“真实账户 GUI 回路下的跟随模式合成计费”，留待用户持账户驱动。
-- [ ] **`requirements.dfsc` 声明**：等含 #247（broker）的公开宿主版本发布后补（`>=该版本 <1.0.0`），同步 `test/manifest.test.js` 已有校验。
+- [x] **`requirements.dfsc` 声明**：已声明 `>=1.0.0 <1.1.0`（DFSC 1.0.0 起正式搭载 v018/Broker；1.0.1 协议无破坏性变化）。
 - [ ] **推送独立仓库**：用户提供 GitHub 账号后执行 `git push`，确认远端默认分支为 `main`。
 - [x] **刷新 SHA**：registry 条目必须使用最终提交的完整 40 位 SHA（已填 `1061c77ae4c12b3d9c6b4bd3fd4999e5429a6427`，即 0.3.0 发布提交）。
 - [ ] **内部文档去留决策**：`docs/marketplace-research.md`（上游机制研究）与 `docs/webui-design.md`（WebUI 设计）是开发期文档，会随资源目录进入市场快照。若不想公开，在提交前移到仓库外或删节；`UPSTREAM.md`（vendor 来源）建议保留——评审时需要溯源。

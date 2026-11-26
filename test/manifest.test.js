@@ -115,7 +115,7 @@ test('dfsc.plugin.json requirements 契约（宿主 schema：作者声明的准�
   assert.ok(requirements, '声明 requirements');
   // requirements.dfsc 需是 semver 范围；已通过真实宿主验收（17/17 + 官方发布验收 10/10 + follow 真机 e2e）后声明
   if (requirements.dfsc !== undefined) {
-    assert.match(requirements.dfsc, /^\d+\.\d+\.\d+(?:[-+].*)?(?:\s+(?:>=|<=|>|<|=|\^|~)\s*\d+\.\d+\.\d+(?:[-+].*)?)*$/, 'dfsc 为语义化版本范围');
+    assert.match(requirements.dfsc, /^(?:(?:>=|<=|>|<|=|\^|~)\s*)?\d+\.\d+\.\d+(?:[-+].*)?(?:\s+(?:>=|<=|>|<|=|\^|~)\s*\d+\.\d+\.\d+(?:[-+].*)?)*$/, 'dfsc 为语义化版本范围');
   }
   assert.ok(Array.isArray(requirements.external) && requirements.external.length > 0, '声明外部准备项');
   assert.ok(requirements.external.length <= 12, '外部准备项不超过 12');

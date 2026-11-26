@@ -23,7 +23,7 @@ import * as cloneVoice from './tools/clone-voice.js';
 import { createHostClient, HostClientError } from './lib/host-client/client.mjs';
 
 const TOOLS = [textToSpeech, listVoices, cloneVoice];
-const SERVER_INFO = { name: 'dfsc-stepaudio', version: '0.3.0' };
+const SERVER_INFO = { name: 'dfsc-stepaudio', version: '0.3.1' };
 /** 与 dfsc.host.json 的 consumer 及 step.plugin.json 的 mcpServers 键一致。 */
 const PLUGIN_ID = 'dfsc-stepaudio';
 const HOST_CONSUMER = 'stepaudio';

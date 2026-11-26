@@ -6,7 +6,7 @@
   "license": "MIT",
   "documentation": { "readme": "README.md", "changelog": "CHANGELOG.md" },
   "requirements": {
-    "dfsc": "0.6.0",
+    "dfsc": ">=1.0.0 <1.1.0",
     "external": [
       {
         "name": "Node.js",
@@ -16,7 +16,7 @@
       },
       {
         "name": "模型访问与额度",
-        "description": "独立模式自备 Step Plan 订阅或阶跃开放平台 API Key（插件中心配置页填写）；跟随模式使用 DFSC 登录的 Step 账户、零 Key，但需含 TTS broker 的宿主构建（上游 #247 合入之后）。语音合成消耗套餐额度或按量计费；市场收录不等于账户或付费授权。",
+        "description": "独立模式自备 Step Plan 订阅或阶跃开放平台 API Key（插件中心配置页填写）；跟随/混合模式使用 DFSC 1.0.x 登录的 Step 账户、零 Key。语音合成消耗套餐额度或按量计费；市场收录不等于账户或付费授权。",
         "url": "https://platform.stepfun.com/",
         "optional": false
       }
