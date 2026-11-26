@@ -18290,7 +18290,7 @@ async function handler3(args, ctx) {
 
 // src/index.js
 var TOOLS = [text_to_speech_exports, list_voices_exports, clone_voice_exports];
-var SERVER_INFO = { name: "dfsc-stepaudio", version: "0.3.0" };
+var SERVER_INFO = { name: "dfsc-stepaudio", version: "0.3.1" };
 var PLUGIN_ID = "dfsc-stepaudio";
 var HOST_CONSUMER = "stepaudio";
 var PLUGIN_ROOT2 = path6.resolve(path6.dirname(fileURLToPath3(import.meta.url)), "..");

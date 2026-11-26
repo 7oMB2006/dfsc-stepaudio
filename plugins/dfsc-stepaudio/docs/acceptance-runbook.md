@@ -12,6 +12,14 @@
 
 > 残留未验（需真实 Key）：真实阶跃 API 的合成计费。上述链路已证明 Key 与请求体正确到达上游端点（fixture 捕获），真实计费留待用户持 Key 执行一次。
 
+## 执行记录（2026-11-26，DFSC 1.0.1 兼容，已通过）
+
+- 宿主：DFSC v1.0.1（tag `263a610`）；官方验收使用本地 1.0.0 runtime（v018，Node 24.16.0）。
+- 核对：v1.0.1 的 `examples/plugins/host-client`、`dfsc.host.schema.json`、TTS adapter 与 broker-v018 一致；插件宿主契约文档由“候选”改为“v1.0.0 正式搭载”，无破坏性协议变化。
+- 插件：0.3.1，`requirements.dfsc: ">=1.0.0 <1.1.0"`。
+- 宿主官方 `verify-stepaudio-release.mjs`：**10/10 通过**（原生安装、托管 fixture、官方 SDK stdio 握手、工具清单、本地音色目录、空文本零二次请求、原生卸载；零外部模型请求）。
+- 插件侧：73/73 测试、smoke 通过。
+
 ## 执行记录（2026-11-15，#247 broker 接入，已通过）
 
 - 宿主：`main-20261115-036ae94`（`desktopBase` 即上游 #247 的 merge commit，r8+；runtime node v24.16.0）。
