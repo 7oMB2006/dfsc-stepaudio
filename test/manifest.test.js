@@ -33,6 +33,7 @@ test('step.plugin.json 符合社区 MCP 插件契约', async () => {
   assert.ok(server, '声明 mcpServers.stepaudio');
   assert.equal(server.command, 'node');
   assert.ok(Array.isArray(server.args) && server.args.length > 0);
+  assert.equal(server.args[0], 'dist/index.mjs', '社区安装目录缺少 package.json，入口必须使用 .mjs');
   assert.ok(
     await fileExists(path.join(PLUGIN_ROOT, server.args[0])),
     `入口文件存在：${server.args[0]}（缺失请先 npm run build）`,

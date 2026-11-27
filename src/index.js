@@ -2,7 +2,7 @@
 /**
  * dfsc-StepAudio：阶跃 StepAudio TTS 的 MCP 服务。
  *
- * 开发期使用官方 MCP SDK；分发前经 esbuild 打包为自包含单文件 dist/index.js
+ * 开发期使用官方 MCP SDK；分发前经 esbuild 打包为自包含单文件 dist/index.mjs
  * （见 package.json 的 build 脚本与 README「开发」一节）。市场安装不执行
  * npm install，因此进入 step.plugin.json 的是打包产物，不是本文件。
  */
@@ -23,11 +23,11 @@ import * as cloneVoice from './tools/clone-voice.js';
 import { createHostClient, HostClientError } from './lib/host-client/client.mjs';
 
 const TOOLS = [textToSpeech, listVoices, cloneVoice];
-const SERVER_INFO = { name: 'dfsc-stepaudio', version: '0.3.1' };
+const SERVER_INFO = { name: 'dfsc-stepaudio', version: '0.3.2' };
 /** 与 dfsc.host.json 的 consumer 及 step.plugin.json 的 mcpServers 键一致。 */
 const PLUGIN_ID = 'dfsc-stepaudio';
 const HOST_CONSUMER = 'stepaudio';
-/** 插件包根：打包后位于 <package>/dist/index.js，上一级即包根（与 config.js 同源）。 */
+/** 插件包根：打包后位于 <package>/dist/index.mjs，上一级即包根（与 config.js 同源）。 */
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const FOLLOW_ONLY_NOTICE = '当前为宿主跟随模式：仅 text_to_speech 可用（broker model.tts，首次合成需宿主授权）；'
   + 'list_voices / clone_voice 需要独立模式的 API Key 配置。';

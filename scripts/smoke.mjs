@@ -10,7 +10,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const entry = path.join(root, 'dist', 'index.js');
+const entry = path.join(root, 'dist', 'index.mjs');
 
 if (!existsSync(entry)) {
   process.stderr.write(`缺少分发产物 ${entry}；请先运行 npm run build\n`);

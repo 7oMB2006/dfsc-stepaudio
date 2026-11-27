@@ -7,7 +7,7 @@
  *   2. 添加本仓库为本地市场源 → 安装插件
  *   3. 读取配置 schema（核对 8 字段 / consumer.server）
  *   4. 保存配置（base_url 指向本地 HTTP fixture，secret 用假 Key）
- *   5. 用真实宿主布局直接 spawn dist/index.js，验证 reader 读到宿主设置、
+ *   5. 用真实宿主布局直接 spawn dist/index.mjs，验证 reader 读到宿主设置、
  *     合成请求带正确 Bearer 到达 fixture
  *   6. 再次保存（新 revision）→ 验证下一次调用 fail-closed
  *   7. 卸载插件，验证移除
@@ -138,7 +138,7 @@ try {
   const installedPkg = path.join(profile, 'step-runtime', 'plugins', 'dfsc-stepaudio');
   const bindingFile = path.join(profile, 'step-runtime', 'desktop-plugins', 'bindings', 'dfsc-stepaudio.json');
   check('宿主写入 binding', await fs.access(bindingFile).then(() => true, () => false));
-  check('安装包含 dist/index.js', await fs.access(path.join(installedPkg, 'dist', 'index.js')).then(() => true, () => false));
+  check('安装包含 dist/index.mjs', await fs.access(path.join(installedPkg, 'dist', 'index.js')).then(() => true, () => false));
 
   // ---- 5. 真实布局 + 我们的产物：reader 读宿主设置并合成 ----
   child = spawn(process.execPath, [path.join(installedPkg, 'dist', 'index.js')], {

@@ -11,7 +11,7 @@ import { cleanupTempDirs, createManagedLayout } from './helpers/managed-layout.m
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // 协议测试启动实际分发产物（自包含打包文件），npm test 的 pretest 会先构建
-const ENTRY = path.join(PLUGIN_ROOT, 'dist', 'index.js');
+const ENTRY = path.join(PLUGIN_ROOT, 'dist', 'index.mjs');
 if (!existsSync(ENTRY)) {
   throw new Error(`缺少分发产物 ${ENTRY}；请先运行 npm run build（npm test 会自动构建）`);
 }
@@ -183,7 +183,7 @@ test('托管布局端到端：dist 产物按宿主设置合成，env 不参与�
   let server;
   try {
     const { root, pkg, snapshotPath } = await createManagedLayout({
-      packageFiles: ['package.json', 'step.plugin.json', 'dfsc.settings.json', 'dist/index.js'],
+      packageFiles: ['package.json', 'step.plugin.json', 'dfsc.settings.json', 'dist/index.mjs'],
       values: {
         mode: 'openapi',
         base_url: `http://127.0.0.1:${port}/v1`,
@@ -209,7 +209,7 @@ test('托管布局端到端：dist 产物按宿主设置合成，env 不参与�
           params: { name: 'text_to_speech', arguments: { text: '端到端验证' } },
         },
       ],
-      { entry: path.join(pkg, 'dist', 'index.js'), cwd: root },
+      { entry: path.join(pkg, 'dist', 'index.mjs'), cwd: root },
     );
 
     const init = await server.waitFor(1);

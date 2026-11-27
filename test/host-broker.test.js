@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { createManagedLayout } from './helpers/managed-layout.mjs';
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const ENTRY = path.join(PLUGIN_ROOT, 'dist', 'index.js');
+const ENTRY = path.join(PLUGIN_ROOT, 'dist', 'index.mjs');
 if (!existsSync(ENTRY)) {
   throw new Error(`缺少分发产物 ${ENTRY}；请先运行 npm run build（npm test 会自动构建）`);
 }
@@ -340,7 +340,7 @@ test('independent 启动上下文与配置 revision 不匹配：拒绝调用（C
   const layout = await createManagedLayout({
     values: { mode: 'openapi', base_url: 'https://api.test/v1', api_key: 'k', model: 'stepaudio-2.5-tts' },
     secrets: { api_key: 'k' },
-    packageFiles: ['package.json', 'step.plugin.json', 'dfsc.settings.json', 'dist/index.js'],
+    packageFiles: ['package.json', 'step.plugin.json', 'dfsc.settings.json', 'dist/index.mjs'],
   });
   const contextRevision = 'b'.repeat(64);
   const h = () => createHash('sha256').update('x').digest('hex');
@@ -355,7 +355,7 @@ test('independent 启动上下文与配置 revision 不匹配：拒绝调用（C
     INITIALIZE,
     { jsonrpc: '2.0', method: 'notifications/initialized' },
     { jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'text_to_speech', arguments: { text: 'x', voice: 'v' } } },
-  ], { entry: path.join(layout.pkg, 'dist', 'index.js'), cwd: layout.root });
+  ], { entry: path.join(layout.pkg, 'dist', 'index.mjs'), cwd: layout.root });
   try {
     const init = await server.waitFor(1, 5000);
     assert.ok(init, 'initialize 超时；stderr=' + server.getStderr());

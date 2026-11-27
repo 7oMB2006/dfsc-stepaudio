@@ -1,6 +1,6 @@
 # dfsc-StepAudio
 
-DFSC 社区插件：把阶跃自家 **StepAudio TTS** 封装成标准 MCP 服务（stdio 传输，**自包含单文件分发**——开发期使用官方 MCP SDK，发布前打包为 `dist/index.js`，用户机器无需任何 npm 依赖，仅需 Node.js 20+）。按 [dfsc-community-plugins](https://github.com/7oMB2006/dfsc-community-plugins) 的插件骨架组织，MCP 声明见 `step.plugin.json`。
+DFSC 社区插件：把阶跃自家 **StepAudio TTS** 封装成标准 MCP 服务（stdio 传输，**自包含单文件分发**——开发期使用官方 MCP SDK，发布前打包为 `dist/index.mjs`，用户机器无需任何 npm 依赖，仅需 Node.js 20+）。按 [dfsc-community-plugins](https://github.com/7oMB2006/dfsc-community-plugins) 的插件骨架组织，MCP 声明见 `step.plugin.json`。
 
 提供三个工具：
 
@@ -14,9 +14,9 @@ DFSC 社区插件：把阶跃自家 **StepAudio TTS** 封装成标准 MCP 服务
 
 1. DFSC「设置 → 插件 → 市场来源」添加社区市场 `https://github.com/7oMB2006/dfsc-community-plugins.git`（或本地目录）。
 2. 在「发现」安装 **dfsc-stepaudio**，按提示重载会话。
-3. 安装只复制资源、**不执行 npm install**——本插件分发为自包含单文件 `dist/index.js`（官方 MCP SDK 已在开发期打包进去），`node dist/index.js` 直接可运行（需要 PATH 上有 Node.js 20+）。
+3. 安装只复制资源、**不执行 npm install**——本插件分发为自包含单文件 `dist/index.mjs`（官方 MCP SDK 已在开发期打包进去），`node dist/index.mjs` 直接可运行（需要 PATH 上有 Node.js 20+）。
 
-收录前也可本地联调：在 DFSC 的 MCP 配置里指向本目录的 `dist/index.js`。
+收录前也可本地联调：在 DFSC 的 MCP 配置里指向本目录的 `dist/index.mjs`。
 
 ## 配置
 
@@ -100,12 +100,12 @@ DFSC 1.0+（v018 运行时，1.0.0 起正式搭载）提供受限官方账户 TT
 ```sh
 npm install      # 仅开发依赖：@modelcontextprotocol/sdk 与 esbuild（用户机器不需要）
 npm test         # pretest 自动 npm run build，再跑 node --test（61 个用例）
-npm run build    # 单独打包：esbuild src/index.js -> dist/index.js
+npm run build    # 单独打包：esbuild src/index.js -> dist/index.mjs
 npm run smoke    # stdio 冒烟（启动 dist 产物）：initialize → tools/list → 错误路径
 node scripts/make-icon.mjs   # 重新生成 icon.png
 ```
 
-`dist/index.js` 是**提交进仓库的分发产物**（市场安装不执行 `npm install`，`.gitignore` 明确不忽略它）；改完 `src/` 必须重新 build 并提交，协议测试与冒烟都只认 dist 产物。
+`dist/index.mjs` 是**提交进仓库的分发产物**（市场安装不执行 `npm install`，`.gitignore` 明确不忽略它）；改完 `src/` 必须重新 build 并提交，协议测试与冒烟都只认 dist 产物。
 
 ## 本机试用
 

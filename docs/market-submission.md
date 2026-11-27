@@ -15,7 +15,7 @@
 
 - 46 个文件；`dist/` 640K（`index.js` 632K + `THIRD_PARTY_LICENSES.txt`）、`data/` 12K、`icon.png` 12.7K——远低于市场单文件 8 MiB / 总计 32 MiB / 1000 文件上限。
 - 无 `node_modules`、无真实 `.env`、无 `output/`、无本机绝对路径（示例文件已改通用占位）。
-- `dist/index.js` 为自包含产物（官方 MCP SDK + vendor 读取器已打入，用户机器零 npm 依赖）。
+- `dist/index.mjs` 为自包含产物（官方 MCP SDK + vendor 读取器已打入，用户机器零 npm 依赖）。
 - 运行时依赖：仅 Node.js 20+（已在 `dfsc.plugin.json` 的 `requirements.external` 声明）。
 
 ## 三、registry.json 条目草稿

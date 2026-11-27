@@ -209,7 +209,7 @@ test('clone_voice preview=true 保存试听音频', async () => {
 });
 
 test('list_voices 本地目录兜底从 ctx 传入的插件根读取（打包布局回归）', async () => {
-  // 回归：兜底目录曾用模块相对路径计算，打包进 dist/index.js 后会指向包外。
+  // 回归：兜底目录曾用模块相对路径计算，打包进 dist/index.mjs 后会指向包外。
   // 现在必须从 ctx.config.pluginRoot 读取——用一个临时根里的最小目录验证。
   const fakeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'dfsc-stepaudio-catalog-'));
   await fs.mkdir(path.join(fakeRoot, 'data'), { recursive: true });
